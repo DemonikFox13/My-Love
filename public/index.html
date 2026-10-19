@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ru" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="google" content="notranslate">
+<meta http-equiv="Content-Language" content="ru">
+<title>Live Draw ❤️</title>
+<link rel="stylesheet" href="/css/style.css?v=32">
+</head>
+<body class="notranslate">
+
+<div id="paper">
+  <canvas id="bgCanvas"></canvas>
+  <canvas id="board"></canvas>
+  <canvas id="previewCanvas"></canvas>
+  <canvas id="pawsCanvas"></canvas>
+  <canvas id="shapesCanvas"></canvas>
+  <canvas id="textCanvas"></canvas>
+</div>
+
+<div id="handOverlay"></div>
+<div id="hearts"></div>
+
+<button id="menuToggleBtn" title="Меню">
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+    <line x1="4" y1="7" x2="20" y2="7"/>
+    <line x1="4" y1="12" x2="20" y2="12"/>
+    <line x1="4" y1="17" x2="20" y2="17"/>
+  </svg>
+</button>
+
+<div class="topbar" id="topbar">
+  <button class="btn" id="editToolbarBtn" title="Настроить панель инструментов">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 9l-3 3 3 3"/>
+      <path d="M9 5l3 -3 3 3"/>
+      <path d="M15 19l-3 3 -3 -3"/>
+      <path d="M19 9l3 3 -3 3"/>
+      <line x1="2" y1="12" x2="22" y2="12"/>
+    </svg>
+  </button>
+  <button class="btn" id="privacyBtn" title="Приватное рисование">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/>
+      <path d="M9 12l2 2 4-4"/>
+    </svg>
+  </button>
+  <button class="btn" id="bgBtn" title="Фон">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="2"/>
+      <circle cx="8.5" cy="9.5" r="1.5" fill="currentColor"/>
+      <path d="M3 17l5-4 4 4 3-3 6 6"/>
+    </svg>
+  </button>
+  <button class="btn" id="saveBtn" title="Сохранить">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v12"/>
+      <path d="M7 11l5 5 5-5"/>
+      <path d="M4 20h16"/>
+    </svg>
+  </button>
+  <button class="btn" id="galleryBtn" title="Галерея">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="7" width="14" height="12" rx="1.5"/>
+      <circle cx="7" cy="11" r="1.3" fill="currentColor"/>
+      <path d="M3 16l4-3 4 4"/>
+      <path d="M17 10l2-2a2 2 0 0 1 3 2.7V19"/>
+    </svg>
+  </button>
+  <button class="btn" id="notifBtn" title="Уведомления">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 16v-5a6 6 0 1 0-12 0v5l-1.5 1.5h15z"/>
+      <path d="M10 20a2 2 0 0 0 4 0"/>
+    </svg>
+  </button>
+</div>
+
+<div class="tools-panel" id="toolsPanel">
+  <button class="tool-btn active" data-tool="brush" title="Кисть">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 3l6 6-9 9-3-3z" fill="currentColor" fill-opacity="0.18"/>
+      <path d="M6 15l-2 5 5-2z" fill="currentColor"/>
+      <path d="M9 12l3 3"/>
+    </svg>
+  </button>
+  <button class="tool-btn" data-tool="eraser" title="Ластик (долгое нажатие — настройки)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+      <path d="M4 15l8-8a2 2 0 0 1 3 0l5 5a2 2 0 0 1 0 3l-5 5H9z" fill="currentColor" fill-opacity="0.15"/>
+      <path d="M4 15l8 8" stroke-linecap="round"/>
+      <path d="M12 23h9" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <button class="tool-btn" data-tool="line" title="Ровная линия">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <line x1="5" y1="19" x2="19" y2="5"/>
+      <circle cx="5" cy="19" r="1.8" fill="currentColor"/>
+      <circle cx="19" cy="5" r="1.8" fill="currentColor"/>
+    </svg>
+  </button>
+  <button class="tool-btn" data-tool="fill" title="Заливка">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+      <path d="M12 3s7 7 7 12a7 7 0 1 1-14 0c0-5 7-12 7-12z" fill="currentColor" fill-opacity="0.25"/>
+      <path d="M7 13c2-1 3-1 5 0s3 1 5 0" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <button class="tool-btn" data-tool="eyedropper" title="Пипетка">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 3l2 2a2 2 0 0 1 0 3l-6 6-4 1 1-4 6-6a2 2 0 0 1 3 0z" fill="currentColor" fill-opacity="0.18"/>
+      <path d="M12 15l-7 7H3v-2l7-7"/>
+      <circle cx="19" cy="5" r="0.8" fill="currentColor"/>
+    </svg>
+  </button>
+  <button class="tool-btn" data-tool="hand" title="Рука (долгое нажатие — сбросить вид)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11"/>
+      <path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V11"/>
+      <path d="M14 11V5.5a1.5 1.5 0 0 1 3 0V11"/>
+      <path d="M17 12V8.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-2.5a5 5 0 0 1-4-2l-3-4a1.5 1.5 0 0 1 2.4-1.8L8 15"/>
+    </svg>
+  </button>
+</div>
+
+<div class="text-toolbar" id="shapesToolbar">
+  <button class="tt-btn" data-action="rotate-left" title="Повернуть">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 12a8 8 0 1 0 2.5-5.8"/>
+      <path d="M4 4v4h4"/>
+    </svg>
+  </button>
+  <button class="tt-btn" data-action="rotate-right" title="Повернуть">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 12a8 8 0 1 1-2.5-5.8"/>
+      <path d="M20 4v4h-4"/>
+    </svg>
+  </button>
+  <button class="tt-btn" data-action="mirror-h" title="Отразить">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="3" x2="12" y2="21" stroke-dasharray="3 3"/>
+      <path d="M8 7l-4 5 4 5z" fill="currentColor" fill-opacity="0.3"/>
+      <path d="M16 7l4 5-4 5z"/>
+    </svg>
+  </button>
+  <button class="tt-btn" data-action="mirror-v" title="Отразить">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="3 3"/>
+      <path d="M7 8l5-4 5 4z" fill="currentColor" fill-opacity="0.3"/>
+      <path d="M7 16l5 4 5-4z"/>
+    </svg>
+  </button>
+  <button class="tt-btn" data-action="edit" title="Редактировать">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 20l4-1 11-11-3-3L5 16z" fill="currentColor" fill-opacity="0.18"/>
+      <path d="M14 6l4 4"/>
+    </svg>
+  </button>
+  <button class="tt-btn" data-action="duplicate" title="Дублировать">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="8" y="3" width="13" height="13" rx="2"/>
+      <path d="M3 8v11a2 2 0 0 0 2 2h11"/>
+    </svg>
+  </button>
+  <button class="tt-btn danger" data-action="delete" title="Удалить">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 7h16"/>
+      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+      <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </svg>
+  </button>
+  <button class="tt-btn close" data-action="deselect" title="Снять">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <line x1="6" y1="6" x2="18" y2="18"/>
+      <line x1="18" y1="6" x2="6" y2="18"/>
+    </svg>
+  </button>
+</div>
+
+<div class="text-toolbar" id="textToolbar">
+  <button class="tt-btn" data-action="rotate-left" title="Повернуть">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 12a8 8 0 1 0 2.5-5.8"/>
+      <path d="M4 4v4h4"/>
+    </svg>
+  </button>
+  <button class="tt-btn" data-action="rotate-right" title="Повернуть">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 12a8 8 0 1 1-2.5-5.8"/>
+      <path d="M20 4v4h-4"/>
+    </svg>
+  </button>
+  <button class="tt-btn" data-action="mirror-h" title="Отразить">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="3" x2="12" y2="21" stroke-dasharray="3 3"/>
+      <path d="M8 7l-4 5 4 5z" fill="currentColor" fill-opacity="0.3"/>
+      <path d="M16 7l4 5-4 5z"/>
+    </svg>
+  </button>
+  <button class="tt-btn" data-action="mirror-v" title="Отразить">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="3 3"/>
+      <path d="M7 8l5-4 5 4z" fill="currentColor" fill-opacity="0.3"/>
+      <path d="M7 16l5 4 5-4z"/>
+    </svg>
+  </button>
+  <button class="tt-btn" data-action="edit" title="Редактировать">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 20l4-1 11-11-3-3L5 16z" fill="currentColor" fill-opacity="0.18"/>
+      <path d="M14 6l4 4"/>
+    </svg>
+  </button>
+  <button class="tt-btn" data-action="duplicate" title="Дублировать">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="8" y="3" width="13" height="13" rx="2"/>
+      <path d="M3 8v11a2 2 0 0 0 2 2h11"/>
+    </svg>
+  </button>
+  <button class="tt-btn danger" data-action="delete" title="Удалить">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 7h16"/>
+      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+      <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </svg>
+  </button>
+  <button class="tt-btn close" data-action="deselect" title="Снять">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <line x1="6" y1="6" x2="18" y2="18"/>
+      <line x1="18" y1="6" x2="6" y2="18"/>
+    </svg>
+  </button>
+</div>
+
+<div class="palette" id="palette">
+  <div class="palette-header">
+    <h3>Цвет</h3>
+    <button type="button" class="palette-close" id="paletteClose">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <line x1="6" y1="6" x2="18" y2="18"/>
+        <line x1="18" y1="6" x2="6" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <label class="palette-section-label">Базовые</label>
+  <div class="base-colors" id="baseColors"></div>
+  <label class="palette-section-label">Точная настройка</label>
+  <div class="mode-switch">
+    <button class="mode-btn active" data-mode="wheel">Колесо</button>
+    <button class="mode-btn" data-mode="square">Квадрат</button>
+  </div>
+  <div class="preview" id="palettePreview"></div>
+  <div class="picker-view" id="wheelView">
+    <canvas id="wheelCanvas" width="260" height="260"></canvas>
+    <div class="wheel-cursor" id="wheelCursor"></div>
+  </div>
+  <div class="picker-view" id="squareView" style="display:none">
+    <canvas id="hueCanvas" width="260" height="24"></canvas>
+    <div class="hue-cursor" id="hueCursor"></div>
+    <canvas id="svCanvas" width="260" height="180"></canvas>
+    <div class="sv-cursor" id="svCursor"></div>
+  </div>
+  <div class="row"><label>H</label><input type="range" id="hSlider" min="0" max="360" value="0"><span class="val" id="hVal">0</span></div>
+  <div class="row"><label>S</label><input type="range" id="sSlider" min="0" max="100" value="0"><span class="val" id="sVal">0</span></div>
+  <div class="row"><label>V</label><input type="range" id="vSlider" min="0" max="100" value="0"><span class="val" id="vVal">0</span></div>
+  <div class="hex">
+    <input type="text" id="hexInput" value="#000000" maxlength="7">
+    <button id="applyHex" type="button">OK</button>
+  </div>
+</div>
+
+<div class="presets-panel" id="presetsPanel">
+  <div class="presets-header">
+    <h3>Настройки</h3>
+    <button type="button" class="palette-close" id="presetsClose">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <line x1="6" y1="6" x2="18" y2="18"/>
+        <line x1="18" y1="6" x2="6" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="presets-section" id="lockedSection" style="display:none">
+    <div class="presets-section-title">🔒 Закреплённые</div>
+    <div class="presets-list" id="lockedList"></div>
+  </div>
+
+  <div class="presets-section">
+    <div class="presets-section-title">🕘 Последние 5</div>
+    <div class="presets-list" id="recentList"></div>
+  </div>
+
+  <button type="button" class="presets-show-all" id="showAllBtn">
+    📚 Показать все с последней очистки
+  </button>
+
+  <div class="presets-section" id="allSection" style="display:none">
+    <div class="presets-section-title">📚 Все с последней очистки</div>
+    <div class="presets-list" id="allList"></div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="btn" id="undoBtn" title="Отменить" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 10h9a5 5 0 0 1 0 10h-3"/>
+      <path d="M8 6l-4 4 4 4"/>
+    </svg>
+  </button>
+  <button class="btn" id="redoBtn" title="Вернуть" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 10h-9a5 5 0 0 0 0 10h3"/>
+      <path d="M16 6l4 4-4 4"/>
+    </svg>
+  </button>
+  <div class="color-picker" id="colorPicker" title="Палитра"></div>
+  <div class="slider-wrap">
+    <input type="range" id="size" min="1" max="40" value="3">
+    <span class="size-value" id="sizeValue">3</span>
+  </div>
+  <button class="btn" id="presetsBtn" title="Настройки">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v5l3 2"/>
+    </svg>
+  </button>
+  <button class="btn" id="toolsBtn" title="Инструменты"></button>
+  <button class="btn" id="shapeBtn" title="Фигуры">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+      <rect x="3" y="13" width="8" height="8" rx="1"/>
+      <circle cx="17.5" cy="17.5" r="3.5"/>
+      <path d="M12 3l4 7H8z"/>
+    </svg>
+  </button>
+  <button class="btn" id="textBtn" title="Текст">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <line x1="5" y1="6" x2="19" y2="6"/>
+      <line x1="12" y1="6" x2="12" y2="19"/>
+    </svg>
+  </button>
+  <button class="btn" id="pawsBtn" title="Лапки">
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <ellipse cx="6.5" cy="10" rx="1.9" ry="2.4"/>
+      <ellipse cx="11" cy="7.5" rx="1.9" ry="2.4"/>
+      <ellipse cx="15.5" cy="8.5" rx="1.9" ry="2.4"/>
+      <ellipse cx="19" cy="12.5" rx="1.7" ry="2.1"/>
+      <path d="M12 12.5c-2.6 0-5 1.6-5 4.5 0 1.7 1.2 2.7 2.8 2.7.9 0 1.4-.4 2.2-.4s1.3.4 2.2.4c1.6 0 2.8-1 2.8-2.7 0-2.9-2.4-4.5-5-4.5z"/>
+    </svg>
+  </button>
+  <button class="btn" id="emojiMuteBtn" title="Запретить партнёру отправлять эмодзи">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M8 9.5h.01"/>
+      <path d="M16 9.5h.01"/>
+      <path d="M8.5 16c1-1 2-1.5 3.5-1.5s2.5.5 3.5 1.5"/>
+      <line x1="3.5" y1="20.5" x2="20.5" y2="3.5" stroke-width="2"/>
+    </svg>
+  </button>
+  <button class="btn heart" id="heartBtn" title="Эмодзи (долгое нажатие — выбрать)">
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5 6 5c2 0 3.5 1 4 2 .5 1 .5 1 2 1s1.5 0 2-1c.5-1 2-2 4-2 3.5 0 5 4 3.5 7C19 16.5 12 21 12 21z"/>
+    </svg>
+  </button>
+  <button class="btn" id="clearBtn" title="Очистить">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 7h16"/>
+      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+      <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </svg>
+  </button>
+</div>
+
+<button class="btn" id="cleanViewExit" title="Показать интерфейс">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+</button>
+
+<input type="file" id="bgFile" accept="image/*" class="hidden-file">
+
+<div class="text-modal" id="eraserModal">
+  <div class="text-modal-inner">
+    <h2>Настройки ластика</h2>
+    <label class="tm-label">Режим</label>
+    <div class="tm-buttons" style="flex-wrap:wrap; gap:6px">
+      <button type="button" class="tm-toggle er-mode-btn active" data-mode="all">Стирать всё</button>
+      <button type="button" class="tm-toggle er-mode-btn" data-mode="erase-only">Только эти</button>
+      <button type="button" class="tm-toggle er-mode-btn" data-mode="erase-except">Всё, кроме этих</button>
+    </div>
+    <label class="tm-label">Цвета для фильтра</label>
+    <div class="er-color-list" id="erColorList"></div>
+    <div class="tm-buttons" style="margin-top:10px">
+      <button type="button" class="tm-toggle" id="erAddColor">+ Цвет</button>
+      <button type="button" class="tm-toggle" id="erPickFromCanvas">Взять с холста</button>
+    </div>
+    <input type="color" id="erColorInput" value="#000000" style="display:none">
+    <div class="tm-actions">
+      <button type="button" class="tm-btn cancel" id="erReset">Сбросить</button>
+      <button type="button" class="tm-btn ok" id="erClose">Готово</button>
+    </div>
+  </div>
+</div>
+
+<div class="emoji-modal" id="emojiModal">
+  <div class="emoji-modal-inner">
+    <h2>Эмодзи</h2>
+    <div class="emoji-tabs" id="emojiTabs"></div>
+    <div class="emoji-grid" id="emojiGrid"></div>
+    <div class="tm-actions">
+      <button type="button" class="tm-btn cancel" id="emojiClose">Готово</button>
+    </div>
+  </div>
+</div>
+
+<div class="text-modal" id="pawsModal">
+  <div class="text-modal-inner">
+    <h2>Лапки</h2>
+    <div class="paws-grid" id="pawsGrid"></div>
+    <label class="tm-label">Размер: <span id="pawsSizeVal">40</span> px</label>
+    <input type="range" id="pawsSize" min="15" max="100" value="40">
+    <label class="tm-label">Цвет</label>
+    <div class="tm-row">
+      <input type="color" id="pawsColor" value="#000000">
+      <span id="pawsColorVal" class="tm-val">#000000</span>
+    </div>
+
+    <label class="tm-label">Режим лапок</label>
+    <label class="paw-mode-row">
+      <input type="radio" name="pawMode" value="fade" id="pawModeFade" checked>
+      <span>🔄 Исчезающие следы</span>
+    </label>
+    <label class="paw-mode-row">
+      <input type="radio" name="pawMode" value="timer" id="pawModeTimer">
+      <span>⏱ По таймеру</span>
+    </label>
+    <label class="paw-mode-row">
+      <input type="radio" name="pawMode" value="permanent" id="pawModePermanent">
+      <span>📌 Постоянные</span>
+    </label>
+
+    <div id="pawTimerRow" style="display:none; margin-top:8px">
+      <label class="tm-label">Исчезнут через:</label>
+      <div style="display:flex; align-items:center; gap:10px">
+        <input type="number" id="pawsTimer" min="1" max="600" value="5" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:#0d0d0d;color:#fff;font-size:15px">
+        <span style="color:#bbb;font-size:14px">сек</span>
+      </div>
+    </div>
+
+    <div class="tm-actions">
+      <button type="button" class="tm-btn ok" id="pawsClose">Готово</button>
+    </div>
+  </div>
+</div>
+
+<div class="text-modal" id="shapesModal">
+  <div class="text-modal-inner">
+    <h2 id="shTitle">Новая фигура</h2>
+    <label class="tm-label">Тип фигуры</label>
+    <div class="shape-grid" id="shGrid">
+      <button type="button" class="shape-btn" data-shape="line"><svg viewBox="0 0 40 40"><line x1="6" y1="34" x2="34" y2="6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
+      <button type="button" class="shape-btn" data-shape="triangle"><svg viewBox="0 0 40 40"><polygon points="20,6 34,34 6,34" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></button>
+      <button type="button" class="shape-btn" data-shape="rect"><svg viewBox="0 0 40 40"><rect x="7" y="10" width="26" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></button>
+      <button type="button" class="shape-btn" data-shape="circle"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14" fill="none" stroke="currentColor" stroke-width="3"/></svg></button>
+      <button type="button" class="shape-btn" data-shape="ellipse"><svg viewBox="0 0 40 40"><ellipse cx="20" cy="20" rx="16" ry="10" fill="none" stroke="currentColor" stroke-width="3"/></svg></button>
+      <button type="button" class="shape-btn" data-shape="heart"><svg viewBox="0 0 40 40"><path d="M20 34 C 4 22, 4 10, 12 8 C 17 7, 20 12, 20 14 C 20 12, 23 7, 28 8 C 36 10, 36 22, 20 34 Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></button>
+      <button type="button" class="shape-btn" data-shape="star"><svg viewBox="0 0 40 40"><polygon points="20,6 24,16 34,17 26,24 29,34 20,28 11,34 14,24 6,17 16,16" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></button>
+      <button type="button" class="shape-btn" data-shape="arrow"><svg viewBox="0 0 40 40"><line x1="6" y1="20" x2="30" y2="20" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><polygon points="30,14 36,20 30,26" fill="currentColor"/></svg></button>
+    </div>
+    <label class="tm-label">Цвет</label>
+    <div class="tm-row"><input type="color" id="shColor" value="#000000"><span id="shColorVal" class="tm-val">#000000</span></div>
+    <label class="tm-label">Толщина линии: <span id="shThickVal">4</span> px</label>
+    <input type="range" id="shThick" min="1" max="30" value="4">
+    <label class="tm-label"><input type="checkbox" id="shFillOn"> Заливка</label>
+    <div class="tm-row" id="shFillRow" style="display:none"><input type="color" id="shFillColor" value="#ffd54f"><span id="shFillColorVal" class="tm-val">#ffd54f</span></div>
+    <div class="tm-preview-wrap"><canvas id="shPreview" width="300" height="120"></canvas></div>
+    <div class="tm-actions">
+      <button type="button" class="tm-btn cancel" id="shCancel">Отмена</button>
+      <button type="button" class="tm-btn ok" id="shOk">Поставить</button>
+    </div>
+  </div>
+</div>
+
+<div class="text-modal" id="textModal">
+  <div class="text-modal-inner">
+    <h2 id="tmTitle">Новый текст</h2>
+    <label class="tm-label">Содержимое</label>
+    <textarea id="tmText" rows="2" placeholder="Введите текст..."></textarea>
+    <label class="tm-label">Цвет текста</label>
+    <div class="tm-row"><input type="color" id="tmColor" value="#000000"><span id="tmColorVal" class="tm-val">#000000</span></div>
+    <label class="tm-label">Размер: <span id="tmSizeVal">32</span> px</label>
+    <input type="range" id="tmSize" min="8" max="200" value="32">
+    <label class="tm-label">Шрифт</label>
+    <input type="hidden" id="tmFont" value="system-ui, sans-serif">
+    <div class="font-picker" id="fontPicker">
+      <button type="button" class="font-picker-btn" id="fontPickerBtn">
+        <span class="font-picker-label" id="fontPickerLabel" style="font-family: system-ui, sans-serif;">Системный</span>
+        <span class="font-picker-arrow">▾</span>
+      </button>
+      <div class="font-picker-list" id="fontPickerList"></div>
+    </div>
+    <label class="tm-label">Начертание</label>
+    <div class="tm-buttons">
+      <button type="button" class="tm-toggle" id="tmBold">Ж</button>
+      <button type="button" class="tm-toggle" id="tmItalic">К</button>
+      <button type="button" class="tm-toggle" id="tmUnderline">Ч</button>
+    </div>
+    <label class="tm-label"><input type="checkbox" id="tmShadowOn"> Тень</label>
+    <div class="tm-subrow" id="tmShadowOpts" style="display:none">
+      <span>Размытие</span><input type="range" id="tmShadowBlur" min="0" max="30" value="4">
+      <span>Сдвиг X</span><input type="range" id="tmShadowX" min="-20" max="20" value="2">
+      <span>Сдвиг Y</span><input type="range" id="tmShadowY" min="-20" max="20" value="2">
+    </div>
+    <label class="tm-label"><input type="checkbox" id="tmStrokeOn"> Обводка</label>
+    <div class="tm-subrow" id="tmStrokeOpts" style="display:none">
+      <span>Толщина</span><input type="range" id="tmStrokeWidth" min="1" max="15" value="2">
+      <span>Цвет</span><input type="color" id="tmStrokeColor" value="#ffffff">
+    </div>
+    <div class="tm-preview-wrap"><canvas id="tmPreview" width="300" height="80"></canvas></div>
+    <div class="tm-actions">
+      <button type="button" class="tm-btn cancel" id="tmCancel">Отмена</button>
+      <button type="button" class="tm-btn ok" id="tmOk">Поставить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="galleryModal">
+  <button class="close" id="galleryClose">✕</button>
+  <h2>Мои рисунки</h2>
+  <div class="grid" id="galleryGrid"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/socket-client.js?v=32"></script>
+<script src="/js/history.js?v=32"></script>
+<script src="/js/snap.js?v=32"></script>
+<script src="/js/paper.js?v=32"></script>
+<script src="/js/canvas.js?v=32"></script>
+<script src="/js/presets.js?v=32"></script>
+<script src="/js/paws.js?v=32"></script>
+<script src="/js/shapes-canvas.js?v=32"></script>
+<script src="/js/text-canvas.js?v=32"></script>
+<script src="/js/background.js?v=32"></script>
+<script src="/js/palette.js?v=32"></script>
+<script src="/js/tools.js?v=32"></script>
+<script src="/js/eraser-tool.js?v=32"></script>
+<script src="/js/emojis.js?v=32"></script>
+<script src="/js/gallery.js?v=32"></script>
+<script src="/js/notifications.js?v=32"></script>
+<script src="/js/shapes-tool.js?v=32"></script>
+<script src="/js/text-tool.js?v=32"></script>
+<script src="/js/toolbar-editor.js?v=32"></script>
+<script src="/js/main.js?v=32"></script>
+</body>
+</html>
