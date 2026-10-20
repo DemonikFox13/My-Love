@@ -19,7 +19,7 @@ app.use('/api', apiRouter);
 
 initSocket(io);
 
-const PORT = process.env.PORT || 3000;
+const PORT = 8080;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);
   console.log(`   Папка сохранений: ${storage.SAVES_DIR}`);
