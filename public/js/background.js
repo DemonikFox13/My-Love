@@ -5,25 +5,36 @@ window.LDBackground = (() => {
   function redraw() {
     bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
     const W = window.innerWidth, H = window.innerHeight;
-
+    
     if (!backgroundImg) {
       bgCtx.fillStyle = '#ffffff';
       bgCtx.fillRect(0, 0, W, H);
-      return;
+    } else {
+      const ir = backgroundImg.width / backgroundImg.height;
+      const sr = W / H;
+      let w, h, x, y;
+      if (ir > sr) { w = W; h = W / ir; x = 0; y = (H - h) / 2; }
+      else         { h = H; w = H * ir; y = 0; x = (W - w) / 2; }
+      bgCtx.fillStyle = '#000';
+      bgCtx.fillRect(0, 0, W, H);
+      bgCtx.drawImage(backgroundImg, x, y, w, h);
     }
-    const ir = backgroundImg.width / backgroundImg.height;
-    const sr = W / H;
-    let w, h, x, y;
-    if (ir > sr) { w = W; h = W / ir; x = 0; y = (H - h) / 2; }
-    else         { h = H; w = H * ir; y = 0; x = (W - w) / 2; }
-
-    bgCtx.fillStyle = '#000';
-    bgCtx.fillRect(0, 0, W, H);
-    bgCtx.drawImage(backgroundImg, x, y, w, h);
+    
+    // ХАК ДЛЯ WEBVIEW: заставляем экран перерисоваться моментально
+    bgCanvas.style.opacity = '0.99';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        bgCanvas.style.opacity = '1';
+      });
+    });
   }
 
   function setFromDataUrl(dataUrl) {
-    if (!dataUrl) { backgroundImg = null; redraw(); return; }
+    if (!dataUrl) { 
+      backgroundImg = null; 
+      redraw(); 
+      return; 
+    }
     const img = new Image();
     img.onload = () => { backgroundImg = img; redraw(); };
     img.src = dataUrl;
@@ -57,17 +68,13 @@ window.LDBackground = (() => {
     const file = input.files[0];
     if (!file) return;
     const dataUrl = await compressFile(file);
-    // ставим у себя
     setFromDataUrl(dataUrl);
-    // отправляем партнёру
     window.LDSocket.emit('set-background', dataUrl);
     input.value = '';
   }
 
   function clearBackgroundLocalAndRemote() {
-    // 1. убираем у себя
     setFromDataUrl(null);
-    // 2. сообщаем серверу → партнёр тоже уберёт
     window.LDSocket.emit('clear-background');
   }
 
@@ -87,10 +94,14 @@ window.LDBackground = (() => {
       holdTimer = setTimeout(() => {
         longPressed = true;
         if (confirm('Убрать фон у всех?')) {
-          clearBackgroundLocalAndRemote();
+          // Небольшая пауза, чтобы WebView успел закрыть диалог, иначе экран не обновится
+          setTimeout(() => {
+            clearBackgroundLocalAndRemote();
+          }, 50);
         }
       }, 700);
     }
+
     function holdEnd() { clearTimeout(holdTimer); }
 
     bgBtn.addEventListener('touchstart', holdStart, { passive: true });
