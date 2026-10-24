@@ -7,26 +7,46 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import io.socket.client.IO
 import io.socket.client.Socket
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URI
 
 class MainActivity : AppCompatActivity() {
 
-    // ВАЖНО: Сюда вставь ссылку на твой сайт с BotHost
     private val SERVER_URL = "https://bot-1792486643-5744-demonikfox.bothost.tech"
     private var socket: Socket? = null
     private lateinit var drawView: DrawView
+    private lateinit var statusText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Создаем контейнер
+        val root = FrameLayout(this)
+        
+        // Добавляем холст
         drawView = DrawView(this)
-        setContentView(drawView)
+        root.addView(drawView)
+
+        // Добавляем текст статуса в левый верхний угол
+        statusText = TextView(this).apply {
+            text = "Подключение..."
+            setTextColor(Color.RED)
+            textSize = 16f
+            setPadding(30, 60, 30, 30)
+            setBackgroundColor(Color.argb(150, 255, 255, 255))
+        }
+        root.addView(statusText)
+
+        setContentView(root)
 
         connectToServer()
     }
@@ -34,16 +54,52 @@ class MainActivity : AppCompatActivity() {
     private fun connectToServer() {
         try {
             val options = IO.Options()
-            options.transports = arrayOf("websocket")
-            options.query = "role=A" // Пока ставим роль A для теста
+            // Убираем принудительный websocket, чтобы Socket.io сам выбрал polling, если websocket заблокирован
+            options.query = "role=A"
 
             socket = IO.socket(URI.create(SERVER_URL), options)
 
             socket?.on(Socket.EVENT_CONNECT) {
                 Log.d("MyLove", "Подключено к серверу!")
+                runOnUiThread {
+                    statusText.text = "ПОДКЛЮЧЕНО (Онлайн)"
+                    statusText.setTextColor(Color.GREEN)
+                }
             }
 
-            // Принимаем штрихи от партнера (роль B)
+            socket?.on(Socket.EVENT_DISCONNECT) {
+                runOnUiThread {
+                    statusText.text = "ОФЛАЙН"
+                    statusText.setTextColor(Color.RED)
+                }
+            }
+            
+            socket?.on(Socket.EVENT_CONNECT_ERROR) { args ->
+                runOnUiThread {
+                    statusText.text = "Ошибка сети: ${args[0]}"
+                    statusText.setTextColor(Color.RED)
+                }
+            }
+
+            // Принимаем историю (то, что было нарисовано ранее)
+            socket?.on("history") { args ->
+                val array = args[0] as JSONArray
+                runOnUiThread {
+                    for (i in 0 until array.length()) {
+                        val stroke = array.getJSONObject(i)
+                        if (stroke.has("from") && stroke.has("to")) {
+                            val fx = stroke.getJSONObject("from").getDouble("x").toFloat()
+                            val fy = stroke.getJSONObject("from").getDouble("y").toFloat()
+                            val tx = stroke.getJSONObject("to").getDouble("x").toFloat()
+                            val ty = stroke.getJSONObject("to").getDouble("y").toFloat()
+                            val colorStr = stroke.optString("color", "#000000")
+                            drawView.drawPartnerStroke(fx, fy, tx, ty, Color.parseColor(colorStr))
+                        }
+                    }
+                }
+            }
+
+            // Принимаем новые штрихи
             socket?.on("draw") { args ->
                 val data = args[0] as JSONObject
                 val fromX = data.getJSONObject("from").getDouble("x").toFloat()
@@ -60,10 +116,10 @@ class MainActivity : AppCompatActivity() {
             socket?.connect()
         } catch (e: Exception) {
             Log.e("MyLove", "Ошибка подключения: ${e.message}")
+            statusText.text = "Ошибка: ${e.message}"
         }
     }
 
-    // Свой собственный холст
     inner class DrawView(context: Context) : View(context) {
         private val paint = Paint().apply {
             color = Color.BLACK
@@ -99,10 +155,7 @@ class MainActivity : AppCompatActivity() {
                 MotionEvent.ACTION_MOVE -> {
                     if (isDrawing) {
                         currentPath?.quadTo(lastX, lastY, event.x, event.y)
-                        lastX = event.x
-                        lastY = event.y
                         
-                        // Отправляем штрих на сервер
                         val data = JSONObject().apply {
                             put("from", JSONObject().put("x", lastX).put("y", lastY))
                             put("to", JSONObject().put("x", event.x).put("y", event.y))
@@ -110,6 +163,8 @@ class MainActivity : AppCompatActivity() {
                         }
                         socket?.emit("draw", data)
                         
+                        lastX = event.x
+                        lastY = event.y
                         invalidate()
                     }
                     return true
