@@ -7,6 +7,9 @@ window.LDBackground = (() => {
     const W = window.innerWidth, H = window.innerHeight;
     
     if (!backgroundImg) {
+      // ХАК: принудительно сбрасываем размеры canvas, чтобы WebView стер старый рисунок
+      bgCanvas.width = bgCanvas.width; 
+      
       bgCtx.fillStyle = '#ffffff';
       bgCtx.fillRect(0, 0, W, H);
     } else {
@@ -20,13 +23,8 @@ window.LDBackground = (() => {
       bgCtx.drawImage(backgroundImg, x, y, w, h);
     }
     
-    // ХАК ДЛЯ WEBVIEW: заставляем экран перерисоваться моментально
-    bgCanvas.style.opacity = '0.99';
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        bgCanvas.style.opacity = '1';
-      });
-    });
+    // ХАК: заставляем WebView подумать, что экран изменил размер, и перерисовать всё
+    window.dispatchEvent(new Event('resize'));
   }
 
   function setFromDataUrl(dataUrl) {
@@ -94,10 +92,13 @@ window.LDBackground = (() => {
       holdTimer = setTimeout(() => {
         longPressed = true;
         if (confirm('Убрать фон у всех?')) {
-          // Небольшая пауза, чтобы WebView успел закрыть диалог, иначе экран не обновится
+          // Вызываем очистку и принудительно перерисовываем ВСЁ
+          clearBackgroundLocalAndRemote();
+          
+          // Ждем 100мс и ещё раз дергаем ресайз на всякий случай
           setTimeout(() => {
-            clearBackgroundLocalAndRemote();
-          }, 50);
+             window.dispatchEvent(new Event('resize'));
+          }, 100);
         }
       }, 700);
     }
