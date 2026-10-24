@@ -29,7 +29,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         
         val root = FrameLayout(this)
-        
         drawView = DrawView(this)
         root.addView(drawView)
 
@@ -41,7 +40,6 @@ class MainActivity : AppCompatActivity() {
             setBackgroundColor(Color.argb(150, 255, 255, 255))
         }
         root.addView(statusText)
-
         setContentView(root)
         connectToServer()
     }
@@ -49,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     private fun connectToServer() {
         try {
             val options = IO.Options()
-            options.query = "role=A" // Роль для телефона
+            options.query = "role=A"
 
             socket = IO.socket(URI.create(SERVER_URL), options)
 
@@ -66,7 +64,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Принимаем историю (только проценты)
             socket?.on("history") { args ->
                 val array = args[0] as JSONArray
                 runOnUiThread {
@@ -75,33 +72,48 @@ class MainActivity : AppCompatActivity() {
                         if (stroke.has("from") && stroke.has("to")) {
                             val fromObj = stroke.getJSONObject("from")
                             val toObj = stroke.getJSONObject("to")
-                            if (fromObj.has("xPct") && toObj.has("xPct")) {
-                                val fx = (fromObj.getDouble("xPct") * drawView.width).toFloat()
-                                val fy = (fromObj.getDouble("yPct") * drawView.height).toFloat()
-                                val tx = (toObj.getDouble("xPct") * drawView.width).toFloat()
-                                val ty = (toObj.getDouble("yPct") * drawView.height).toFloat()
-                                val colorStr = stroke.optString("color", "#000000")
-                                drawView.drawPartnerStroke(fx, fy, tx, ty, Color.parseColor(colorStr))
+                            
+                            val fx: Float; val fy: Float; val tx: Float; val ty: Float
+                            if (fromObj.has("xPct")) {
+                                fx = (fromObj.getDouble("xPct") * drawView.width).toFloat()
+                                fy = (fromObj.getDouble("yPct") * drawView.height).toFloat()
+                                tx = (toObj.getDouble("xPct") * drawView.width).toFloat()
+                                ty = (toObj.getDouble("yPct") * drawView.height).toFloat()
+                            } else {
+                                fx = fromObj.getDouble("x").toFloat()
+                                fy = fromObj.getDouble("y").toFloat()
+                                tx = toObj.getDouble("x").toFloat()
+                                ty = toObj.getDouble("y").toFloat()
                             }
+                            
+                            val colorStr = stroke.optString("color", "#000000")
+                            drawView.drawPartnerStroke(fx, fy, tx, ty, Color.parseColor(colorStr))
                         }
                     }
                 }
             }
 
-            // Принимаем новые штрихи (только проценты)
             socket?.on("draw") { args ->
                 val data = args[0] as JSONObject
                 runOnUiThread {
                     val fromObj = data.getJSONObject("from")
                     val toObj = data.getJSONObject("to")
-                    if (fromObj.has("xPct") && toObj.has("xPct")) {
-                        val fx = (fromObj.getDouble("xPct") * drawView.width).toFloat()
-                        val fy = (fromObj.getDouble("yPct") * drawView.height).toFloat()
-                        val tx = (toObj.getDouble("xPct") * drawView.width).toFloat()
-                        val ty = (toObj.getDouble("yPct") * drawView.height).toFloat()
-                        val colorStr = data.optString("color", "#000000")
-                        drawView.drawPartnerStroke(fx, fy, tx, ty, Color.parseColor(colorStr))
+                    
+                    val fx: Float; val fy: Float; val tx: Float; val ty: Float
+                    if (fromObj.has("xPct")) {
+                        fx = (fromObj.getDouble("xPct") * drawView.width).toFloat()
+                        fy = (fromObj.getDouble("yPct") * drawView.height).toFloat()
+                        tx = (toObj.getDouble("xPct") * drawView.width).toFloat()
+                        ty = (toObj.getDouble("yPct") * drawView.height).toFloat()
+                    } else {
+                        fx = fromObj.getDouble("x").toFloat()
+                        fy = fromObj.getDouble("y").toFloat()
+                        tx = toObj.getDouble("x").toFloat()
+                        ty = toObj.getDouble("y").toFloat()
                     }
+                    
+                    val colorStr = data.optString("color", "#000000")
+                    drawView.drawPartnerStroke(fx, fy, tx, ty, Color.parseColor(colorStr))
                 }
             }
 
@@ -141,13 +153,12 @@ class MainActivity : AppCompatActivity() {
                     if (isDrawing) {
                         currentPath?.quadTo(lastX, lastY, event.x, event.y)
                         
-                        // Отправляем координаты ТОЛЬКО в процентах
                         val w = width.toDouble()
                         val h = height.toDouble()
                         
                         val data = JSONObject().apply {
-                            put("from", JSONObject().put("xPct", lastX / w).put("yPct", lastY / h))
-                            put("to", JSONObject().put("xPct", event.x / w).put("yPct", event.y / h))
+                            put("from", JSONObject().put("x", lastX).put("y", lastY).put("xPct", lastX / w).put("yPct", lastY / h))
+                            put("to", JSONObject().put("x", event.x).put("y", event.y).put("xPct", event.x / w).put("yPct", event.y / h))
                             put("color", "#000000")
                         }
                         socket?.emit("draw", data)
