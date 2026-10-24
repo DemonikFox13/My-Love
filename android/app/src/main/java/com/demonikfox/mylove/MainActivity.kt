@@ -18,24 +18,26 @@ class MainActivity : AppCompatActivity() {
 
         webView = findViewById(R.id.webview)
         
-        // Настройки WebView, чтобы сайт работал как в обычном браузере
+        // Очищаем весь кэш при запуске
+        webView.clearCache(true)
+        webView.clearHistory()
+
         val webSettings: WebSettings = webView.settings
         webSettings.javaScriptEnabled = true
         webSettings.domStorageEnabled = true
         webSettings.databaseEnabled = true
         webSettings.allowFileAccess = true
         
-        // Разрешаем загружать контент
+        // ОТКЛЮЧАЕМ КЭШ
+        webSettings.cacheMode = WebSettings.LOAD_NO_CACHE
         webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
         webView.webViewClient = WebViewClient()
 
-        // Загружаем твой сайт с ролью A (для телефона)
-        // Если это телефон девушки, здесь нужно будет поменять на ?role=B
-        webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=A")
+        // Добавляем ?v=1 в конце, чтобы точно обойти кэш
+        webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=A&v=1")
     }
 
-    // Чтобы кнопка "Назад" на телефоне не закрывала приложение сразу, а работала как в браузере
     override fun onBackPressed() {
         if (webView.canGoBack()) {
             webView.goBack()
