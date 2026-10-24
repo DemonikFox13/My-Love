@@ -32,13 +32,10 @@ window.LDCanvas = (() => {
   const historyBuffer = [];
   let sendingToPartner = true;
 
-  // === ИСЧЕЗАЮЩИЕ ЛАПКИ (очередь из 5 с фиксированными прозрачностями) ===
   const PAW_QUEUE_MAX = 5;
   const PAW_ALPHAS = [1.0, 0.78, 0.55, 0.33, 0.12];
   const PAW_QUEUE_TIMEOUT_MS = 8000;
   const pawsQueue = [];
-
-  // === ТАЙМЕРНЫЕ ЛАПКИ ===
   const timerPaws = [];
 
   function addPaw(paw) {
@@ -85,13 +82,11 @@ window.LDCanvas = (() => {
     pawsCtx.globalAlpha = 1;
   }
 
-  // Автоочистка: лапки старше 8 сек уходят
   setInterval(() => {
     if (pawsQueue.length === 0) return;
     const now = Date.now();
     let changed = false;
     for (let i = pawsQueue.length - 1; i >= 0; i--) {
-      // Активная лапка (та, что сейчас рисуется) — обновляем время
       if (state.drawing && i === 0) {
         pawsQueue[i].addedAt = now;
         continue;
@@ -114,7 +109,6 @@ window.LDCanvas = (() => {
     }
   }
 
-  // === ЛАСТИК СТИРАЕТ ЛАПКИ ===
   function distToSegment(px, py, x1, y1, x2, y2) {
     const dx = x2 - x1, dy = y2 - y1;
     const lenSq = dx*dx + dy*dy;
@@ -127,26 +121,16 @@ window.LDCanvas = (() => {
 
   function erasePawsAlong(from, to, radius) {
     let changed = false;
-
     for (let i = pawsQueue.length - 1; i >= 0; i--) {
       const p = pawsQueue[i];
       const d = distToSegment(p.x, p.y, from.x, from.y, to.x, to.y);
-      if (d < radius + p.size * 0.5) {
-        pawsQueue.splice(i, 1);
-        changed = true;
-      }
+      if (d < radius + p.size * 0.5) { pawsQueue.splice(i, 1); changed = true; }
     }
-
     for (let i = timerPaws.length - 1; i >= 0; i--) {
       const p = timerPaws[i].paw;
       const d = distToSegment(p.x, p.y, from.x, from.y, to.x, to.y);
-      if (d < radius + p.size * 0.5) {
-        clearTimeout(timerPaws[i].timeoutId);
-        timerPaws.splice(i, 1);
-        changed = true;
-      }
+      if (d < radius + p.size * 0.5) { clearTimeout(timerPaws[i].timeoutId); timerPaws.splice(i, 1); changed = true; }
     }
-
     if (changed) redrawPaws();
   }
 
@@ -196,7 +180,16 @@ window.LDCanvas = (() => {
     return { x: t.clientX - rect.left, y: t.clientY - rect.top };
   }
 
+  // ОБНОВЛЕНО: понимает и пиксели, и проценты
   function drawSegment(from, to, color, width, isEraser) {
+    let fx = from.x, fy = from.y, tx = to.x, ty = to.y;
+    if (from.xPct !== undefined && from.yPct !== undefined && to.xPct !== undefined && to.yPct !== undefined) {
+        fx = from.xPct * window.innerWidth;
+        fy = from.yPct * window.innerHeight;
+        tx = to.xPct * window.innerWidth;
+        ty = to.yPct * window.innerHeight;
+    }
+    
     ctx.save();
     ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
     ctx.strokeStyle = color || '#000000';
@@ -204,13 +197,19 @@ window.LDCanvas = (() => {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(to.x, to.y);
+    ctx.moveTo(fx, fy);
+    ctx.lineTo(tx, ty);
     ctx.stroke();
     ctx.restore();
   }
 
   function eraseFiltered(from, to, width, filter) {
+    let fx = from.x, fy = from.y, tx = to.x, ty = to.y;
+    if (from.xPct !== undefined) {
+        fx = from.xPct * window.innerWidth; fy = from.yPct * window.innerHeight;
+        tx = to.xPct * window.innerWidth; ty = to.yPct * window.innerHeight;
+    }
+
     if (!filter || filter.mode === 'all' || (filter.colors.length === 0 && filter.mode !== 'erase-except')) {
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
@@ -219,28 +218,26 @@ window.LDCanvas = (() => {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();
-      ctx.moveTo(from.x, from.y);
-      ctx.lineTo(to.x, to.y);
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(tx, ty);
       ctx.stroke();
       ctx.restore();
       return;
     }
-    if (filter.mode === 'erase-only' && filter.colors.length === 0) return;
-
+    
     const half = width / 2 + 2;
-    const bx1 = Math.max(0, Math.floor((Math.min(from.x, to.x) - half) * dpr));
-    const by1 = Math.max(0, Math.floor((Math.min(from.y, to.y) - half) * dpr));
-    const bx2 = Math.min(canvas.width,  Math.ceil((Math.max(from.x, to.x) + half) * dpr));
-    const by2 = Math.min(canvas.height, Math.ceil((Math.max(from.y, to.y) + half) * dpr));
+    const bx1 = Math.max(0, Math.floor((Math.min(fx, tx) - half) * dpr));
+    const by1 = Math.max(0, Math.floor((Math.min(fy, ty) - half) * dpr));
+    const bx2 = Math.min(canvas.width,  Math.ceil((Math.max(fx, tx) + half) * dpr));
+    const by2 = Math.min(canvas.height, Math.ceil((Math.max(fy, ty) + half) * dpr));
     const w = bx2 - bx1, h = by2 - by1;
     if (w <= 0 || h <= 0) return;
 
     let img;
     try { img = ctx.getImageData(bx1, by1, w, h); } catch (e) { return; }
     const data = img.data;
-
-    const lx1 = from.x * dpr, ly1 = from.y * dpr;
-    const lx2 = to.x * dpr,   ly2 = to.y * dpr;
+    const lx1 = fx * dpr, ly1 = fy * dpr;
+    const lx2 = tx * dpr, ly2 = ty * dpr;
     const dx = lx2 - lx1, dy = ly2 - ly1;
     const lenSq = dx*dx + dy*dy;
     const brushRadius = (width / 2) * dpr;
@@ -303,13 +300,9 @@ window.LDCanvas = (() => {
     const hex = getPixelHex(x, y);
     if (!hex) return;
     state.color = hex;
-    if (window.LDPalette && window.LDPalette.setFromHex) {
-      window.LDPalette.setFromHex(hex);
-    }
+    if (window.LDPalette && window.LDPalette.setFromHex) window.LDPalette.setFromHex(hex);
     state.tool = 'brush';
-    if (window.LDTools && window.LDTools.setActive) {
-      window.LDTools.setActive('brush');
-    }
+    if (window.LDTools && window.LDTools.setActive) window.LDTools.setActive('brush');
   }
 
   function floodFill(x, y, color) {
@@ -320,20 +313,17 @@ window.LDCanvas = (() => {
     const rgb = hexToRgb(color);
     if (!rgb) return;
     const fR = rgb.r, fG = rgb.g, fB = rgb.b, fA = 255;
-
     let imgData;
     try { imgData = ctx.getImageData(0, 0, W, H); } catch (e) { return; }
     const data = imgData.data;
     const startIdx = (py * W + px) * 4;
     const tR = data[startIdx], tG = data[startIdx+1], tB = data[startIdx+2], tA = data[startIdx+3];
     if (tR === fR && tG === fG && tB === fB && tA === fA) return;
-
     const visited = new Uint8Array(W * H);
     const stack = [px, py];
-    const maxIter = W * H;
     let iter = 0;
     while (stack.length) {
-      if (++iter > maxIter * 2) break;
+      if (++iter > W * H * 2) break;
       const cy = stack.pop();
       const cx = stack.pop();
       if (cx < 0 || cx >= W || cy < 0 || cy >= H) continue;
@@ -350,31 +340,21 @@ window.LDCanvas = (() => {
 
   function emitFill(x, y, color) {
     if (!sendingToPartner) return;
-    window.LDSocket.emit('fill', {
-      xPct: x / window.innerWidth,
-      yPct: y / window.innerHeight,
-      color,
-    });
+    window.LDSocket.emit('fill', { xPct: x / window.innerWidth, yPct: y / window.innerHeight, color });
   }
 
   function exitSpecialModes() {
-    if (window.LDTextTool && window.LDTextTool.setTextMode) {
-      window.LDTextTool.setTextMode(false);
-    }
-    if (window.LDShapesTool && window.LDShapesTool.setShapesMode) {
-      window.LDShapesTool.setShapesMode(false);
-    }
+    if (window.LDTextTool && window.LDTextTool.setTextMode) window.LDTextTool.setTextMode(false);
+    if (window.LDShapesTool && window.LDShapesTool.setShapesMode) window.LDShapesTool.setShapesMode(false);
     state.textMode = false;
     state.shapesMode = false;
     document.body.classList.remove('text-mode', 'shapes-mode');
   }
 
   function placePawsAlong(from, to) {
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
+    const dx = to.x - from.x, dy = to.y - from.y;
     const len = Math.hypot(dx, dy);
     if (len < 0.1) return;
-
     const size = state.paw.size;
     const stepDist = size * 1.2;
     const gap = size * 0.55;
@@ -383,59 +363,32 @@ window.LDCanvas = (() => {
     const perpX = -ny, perpY = nx;
     const mode = state.paw.mode || 'fade';
     const timerSec = state.paw.timer || 5;
-
     let travelled = 0;
-
     while (travelled + stepDist <= len) {
       travelled += stepDist;
       const px = from.x + nx * travelled;
       const py = from.y + ny * travelled;
-      const side = state.pawSide;
-      const sideMul = side === 'L' ? -1 : 1;
+      const sideMul = state.pawSide === 'L' ? -1 : 1;
       const cx = px + perpX * gap * sideMul;
       const cy = py + perpY * gap * sideMul;
-
       const paw = {
-        isPaw: true,
-        mode,
-        timer: timerSec,
-        x: cx, y: cy,
-        angle,
-        side,
-        pawType: state.paw.type,
-        size,
-        color: state.color,
-        addedAt: Date.now(),
+        isPaw: true, mode, timer: timerSec, x: cx, y: cy, angle, side: state.pawSide,
+        pawType: state.paw.type, size, color: state.color, addedAt: Date.now(),
       };
-
-      if (mode === 'fade') {
-        addPaw(paw);
-      } else if (mode === 'timer') {
-        addPawTimer(paw, timerSec);
-      } else {
-        drawPawPermanent(paw);
-        historyBuffer.push(paw);
-      }
-
+      if (mode === 'fade') addPaw(paw);
+      else if (mode === 'timer') addPawTimer(paw, timerSec);
+      else { drawPawPermanent(paw); historyBuffer.push(paw); }
       if (sendingToPartner) window.LDSocket.emit('paw', paw);
       else buffer.push(paw);
-
-      state.pawSide = side === 'L' ? 'R' : 'L';
+      state.pawSide = state.pawSide === 'L' ? 'R' : 'L';
     }
-
-    state.pawLast = {
-      x: from.x + nx * travelled,
-      y: from.y + ny * travelled
-    };
+    state.pawLast = { x: from.x + nx * travelled, y: from.y + ny * travelled };
   }
 
   function start(e) {
     e.preventDefault();
-    if (state.textMode || state.shapesMode) return;
-    if (state.tool === 'hand') return;
-
+    if (state.textMode || state.shapesMode || state.tool === 'hand') return;
     const p = getPos(e);
-
     if (state.eraserPickCallback) {
       const hex = getPixelHex(p.x, p.y);
       const cb = state.eraserPickCallback;
@@ -443,7 +396,6 @@ window.LDCanvas = (() => {
       if (hex) cb(hex);
       return;
     }
-
     if (state.tool === 'paw') {
       state.drawing = true;
       state.pawLast = { x: p.x, y: p.y };
@@ -452,17 +404,11 @@ window.LDCanvas = (() => {
       if (pawsQueue.length > 0) pawsQueue[0].addedAt = Date.now();
       return;
     }
-
     if (state.tool === 'eyedropper') { pickColor(p.x, p.y); return; }
     if (state.tool === 'fill') {
       floodFill(p.x, p.y, state.color);
       emitFill(p.x, p.y, state.color);
-      if (window.LDHistory) {
-        window.LDHistory.add({
-          type: 'fill',
-          data: { xPct: p.x / window.innerWidth, yPct: p.y / window.innerHeight, color: state.color }
-        });
-      }
+      if (window.LDHistory) window.LDHistory.add({ type: 'fill', data: { xPct: p.x / window.innerWidth, yPct: p.y / window.innerHeight, color: state.color } });
       commitPreset();
       return;
     }
@@ -486,37 +432,29 @@ window.LDCanvas = (() => {
       if (state.pawLast) placePawsAlong(state.pawLast, p);
       return;
     }
-
     if (state.tool === 'line') {
       state.lineEnd = p;
       drawLinePreview();
       return;
     }
+    
+    // Отправляем и рисуем с процентами
+    const pctFrom = { ...state.lastPoint, xPct: state.lastPoint.x / window.innerWidth, yPct: state.lastPoint.y / window.innerHeight };
+    const pctTo = { ...p, xPct: p.x / window.innerWidth, yPct: p.y / window.innerHeight };
 
     if (state.tool === 'eraser') {
-      const seg = {
-        from: state.lastPoint, to: p,
-        color: '#000', width: state.lineWidth,
-        isEraser: true,
-        eraserFilter: { mode: state.eraserFilter.mode, colors: state.eraserFilter.colors.slice() }
-      };
-      eraseFiltered(state.lastPoint, p, state.lineWidth, state.eraserFilter);
+      const seg = { from: pctFrom, to: pctTo, color: '#000', width: state.lineWidth, isEraser: true, eraserFilter: { mode: state.eraserFilter.mode, colors: state.eraserFilter.colors.slice() } };
+      eraseFiltered(pctFrom, pctTo, state.lineWidth, state.eraserFilter);
       erasePawsAlong(state.lastPoint, p, state.lineWidth / 2 + 8);
-      if (sendingToPartner) window.LDSocket.emit('draw', seg);
-      else buffer.push(seg);
+      if (sendingToPartner) window.LDSocket.emit('draw', seg); else buffer.push(seg);
       historyBuffer.push(seg);
       state.lastPoint = p;
       return;
     }
-
-    const color = state.color;
-    const segment = {
-      from: state.lastPoint, to: p,
-      color, width: state.lineWidth, isEraser: false
-    };
-    drawSegment(state.lastPoint, p, color, state.lineWidth, false);
-    if (sendingToPartner) window.LDSocket.emit('draw', segment);
-    else buffer.push(segment);
+    
+    const segment = { from: pctFrom, to: pctTo, color: state.color, width: state.lineWidth, isEraser: false };
+    drawSegment(pctFrom, pctTo, state.color, state.lineWidth, false);
+    if (sendingToPartner) window.LDSocket.emit('draw', segment); else buffer.push(segment);
     historyBuffer.push(segment);
     state.lastPoint = p;
   }
@@ -524,20 +462,17 @@ window.LDCanvas = (() => {
   function end(e) {
     e.preventDefault();
     if (!state.drawing) return;
-
     let didDraw = false;
-
     if (state.tool === 'line' && state.lineStart && state.lineEnd) {
       const from = state.lineStart, to = state.lineEnd;
       const dist = Math.hypot(to.x - from.x, to.y - from.y);
       if (dist > 5) {
-        drawSegment(from, to, state.color, state.lineWidth, false);
-        const seg = { from, to, color: state.color, width: state.lineWidth, isEraser: false };
-        if (sendingToPartner) window.LDSocket.emit('draw', seg);
-        else buffer.push(seg);
-        if (window.LDHistory) {
-          window.LDHistory.add({ type: 'strokes', data: [seg] });
-        }
+        const pctFrom = { ...from, xPct: from.x / window.innerWidth, yPct: from.y / window.innerHeight };
+        const pctTo = { ...to, xPct: to.x / window.innerWidth, yPct: to.y / window.innerHeight };
+        drawSegment(pctFrom, pctTo, state.color, state.lineWidth, false);
+        const seg = { from: pctFrom, to: pctTo, color: state.color, width: state.lineWidth, isEraser: false };
+        if (sendingToPartner) window.LDSocket.emit('draw', seg); else buffer.push(seg);
+        if (window.LDHistory) window.LDHistory.add({ type: 'strokes', data: [seg] });
         didDraw = true;
       }
       clearPreview();
@@ -545,22 +480,16 @@ window.LDCanvas = (() => {
       state.lineEnd = null;
     } else if (state.tool === 'paw') {
       if (historyBuffer.length > 0) {
-        if (window.LDHistory) {
-          window.LDHistory.add({ type: 'strokes', data: historyBuffer.slice() });
-        }
+        if (window.LDHistory) window.LDHistory.add({ type: 'strokes', data: historyBuffer.slice() });
         historyBuffer.length = 0;
       }
       didDraw = true;
     } else if (historyBuffer.length > 0) {
-      if (window.LDHistory) {
-        window.LDHistory.add({ type: 'strokes', data: historyBuffer.slice() });
-      }
+      if (window.LDHistory) window.LDHistory.add({ type: 'strokes', data: historyBuffer.slice() });
       historyBuffer.length = 0;
       didDraw = true;
     }
-
     if (didDraw) commitPreset();
-
     state.drawing = false;
     state.lastPoint = null;
     state.pawLast = null;
@@ -571,13 +500,11 @@ window.LDCanvas = (() => {
     clearPreview();
     clearPaws();
   }
-
   function clearSilent() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     clearPreview();
     clearPaws();
   }
-
   function bindEvents() {
     canvas.addEventListener('mousedown', start);
     canvas.addEventListener('mousemove', move);
@@ -589,59 +516,24 @@ window.LDCanvas = (() => {
     canvas.addEventListener('touchcancel', end, { passive: false });
     window.addEventListener('resize', () => { resize(); window.LDBackground.redraw(); });
   }
-
   function toggleSending() {
     sendingToPartner = !sendingToPartner;
-    if (sendingToPartner && buffer.length) {
-      window.LDSocket.emit('draw-batch', buffer.slice());
-      buffer.length = 0;
-    }
+    if (sendingToPartner && buffer.length) { window.LDSocket.emit('draw-batch', buffer.slice()); buffer.length = 0; }
     return sendingToPartner;
   }
-  function isSending() { return sendingToPartner; }
-  function getBufferLength() { return buffer.length; }
-
   function setColor(c) { state.color = c; }
-
-  function setEraser(on) {
-    state.tool = on ? 'eraser' : 'brush';
-    if (on) { state.textMode = false; state.shapesMode = false; document.body.classList.remove('text-mode','shapes-mode'); }
-  }
+  function setEraser(on) { state.tool = on ? 'eraser' : 'brush'; if (on) { state.textMode = false; state.shapesMode = false; document.body.classList.remove('text-mode','shapes-mode'); } }
   function setTextMode(on) { state.textMode = !!on; if (on) state.shapesMode = false; }
   function setShapesMode(on) { state.shapesMode = !!on; if (on) state.textMode = false; }
-  function setTool(t) {
-    state.tool = t;
-    clearPreview();
-    const allowed = ['brush','eraser','line','fill','eyedropper','hand','paw'];
-    if (!allowed.includes(t)) state.tool = 'brush';
-    document.body.classList.toggle('hand-mode', t === 'hand');
-  }
-  function setEraserFilter(f) {
-    state.eraserFilter = f || { mode: 'all', colors: [] };
-  }
-  function startEraserColorPick(cb) {
-    state.eraserPickCallback = cb;
-    state.textMode = false;
-    state.shapesMode = false;
-    document.body.classList.remove('text-mode','shapes-mode');
-  }
-
-  function applyFloodFillFromPercent(xPct, yPct, color) {
-    const x = xPct * window.innerWidth;
-    const y = yPct * window.innerHeight;
-    floodFill(x, y, color);
-  }
+  function setTool(t) { state.tool = t; clearPreview(); const allowed = ['brush','eraser','line','fill','eyedropper','hand','paw']; if (!allowed.includes(t)) state.tool = 'brush'; document.body.classList.toggle('hand-mode', t === 'hand'); }
+  function setEraserFilter(f) { state.eraserFilter = f || { mode: 'all', colors: [] }; }
+  function startEraserColorPick(cb) { state.eraserPickCallback = cb; state.textMode = false; state.shapesMode = false; document.body.classList.remove('text-mode','shapes-mode'); }
+  function applyFloodFillFromPercent(xPct, yPct, color) { floodFill(xPct * window.innerWidth, yPct * window.innerHeight, color); }
 
   return {
-    canvas, ctx, bgCanvas, bgCtx, dpr,
-    state,
-    resize, drawSegment, eraseFiltered, clear, clearSilent, bindEvents,
-    toggleSending, isSending, getBufferLength,
-    setColor, setEraser, setTextMode, setShapesMode, setTool,
-    setEraserFilter, startEraserColorPick,
-    applyFloodFillFromPercent,
-    addPaw, addPawTimer, redrawPaws, clearPaws,
-    exitSpecialModes,
-    setWidth: (w) => { state.lineWidth = w; },
+    canvas, ctx, bgCanvas, bgCtx, dpr, state,
+    resize, drawSegment, eraseFiltered, clear, clearSilent, bindEvents, toggleSending, isSending: () => sendingToPartner, getBufferLength: () => buffer.length,
+    setColor, setEraser, setTextMode, setShapesMode, setTool, setEraserFilter, startEraserColorPick, applyFloodFillFromPercent,
+    addPaw, addPawTimer, redrawPaws, clearPaws, exitSpecialModes, setWidth: (w) => { state.lineWidth = w; },
   };
 })();

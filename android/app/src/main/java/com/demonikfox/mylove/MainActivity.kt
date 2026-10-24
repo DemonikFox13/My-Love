@@ -7,7 +7,6 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
@@ -29,14 +28,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Создаем контейнер
         val root = FrameLayout(this)
         
-        // Добавляем холст
         drawView = DrawView(this)
         root.addView(drawView)
 
-        // Добавляем текст статуса в левый верхний угол
         statusText = TextView(this).apply {
             text = "Подключение..."
             setTextColor(Color.RED)
@@ -54,13 +50,11 @@ class MainActivity : AppCompatActivity() {
     private fun connectToServer() {
         try {
             val options = IO.Options()
-            // Убираем принудительный websocket, чтобы Socket.io сам выбрал polling, если websocket заблокирован
             options.query = "role=A"
 
             socket = IO.socket(URI.create(SERVER_URL), options)
 
             socket?.on(Socket.EVENT_CONNECT) {
-                Log.d("MyLove", "Подключено к серверу!")
                 runOnUiThread {
                     statusText.text = "ПОДКЛЮЧЕНО (Онлайн)"
                     statusText.setTextColor(Color.GREEN)
@@ -76,22 +70,26 @@ class MainActivity : AppCompatActivity() {
             
             socket?.on(Socket.EVENT_CONNECT_ERROR) { args ->
                 runOnUiThread {
-                    statusText.text = "Ошибка сети: ${args[0]}"
+                    statusText.text = "Ошибка сети"
                     statusText.setTextColor(Color.RED)
                 }
             }
 
-            // Принимаем историю (то, что было нарисовано ранее)
+            // Принимаем историю (в процентах)
             socket?.on("history") { args ->
                 val array = args[0] as JSONArray
                 runOnUiThread {
                     for (i in 0 until array.length()) {
                         val stroke = array.getJSONObject(i)
                         if (stroke.has("from") && stroke.has("to")) {
-                            val fx = stroke.getJSONObject("from").getDouble("x").toFloat()
-                            val fy = stroke.getJSONObject("from").getDouble("y").toFloat()
-                            val tx = stroke.getJSONObject("to").getDouble("x").toFloat()
-                            val ty = stroke.getJSONObject("to").getDouble("y").toFloat()
+                            val fromObj = stroke.getJSONObject("from")
+                            val toObj = stroke.getJSONObject("to")
+                            // Если пришло в процентах — конвертируем в пиксели экрана
+                            val fx = if (fromObj.has("xPct")) (fromObj.getDouble("xPct") * drawView.width).toFloat() else fromObj.getDouble("x").toFloat()
+                            val fy = if (fromObj.has("yPct")) (fromObj.getDouble("yPct") * drawView.height).toFloat() else fromObj.getDouble("y").toFloat()
+                            val tx = if (toObj.has("xPct")) (toObj.getDouble("xPct") * drawView.width).toFloat() else toObj.getDouble("x").toFloat()
+                            val ty = if (toObj.has("yPct")) (toObj.getDouble("yPct") * drawView.height).toFloat() else toObj.getDouble("y").toFloat()
+                            
                             val colorStr = stroke.optString("color", "#000000")
                             drawView.drawPartnerStroke(fx, fy, tx, ty, Color.parseColor(colorStr))
                         }
@@ -102,14 +100,16 @@ class MainActivity : AppCompatActivity() {
             // Принимаем новые штрихи
             socket?.on("draw") { args ->
                 val data = args[0] as JSONObject
-                val fromX = data.getJSONObject("from").getDouble("x").toFloat()
-                val fromY = data.getJSONObject("from").getDouble("y").toFloat()
-                val toX = data.getJSONObject("to").getDouble("x").toFloat()
-                val toY = data.getJSONObject("to").getDouble("y").toFloat()
-                val colorStr = data.optString("color", "#000000")
-                
                 runOnUiThread {
-                    drawView.drawPartnerStroke(fromX, fromY, toX, toY, Color.parseColor(colorStr))
+                    val fromObj = data.getJSONObject("from")
+                    val toObj = data.getJSONObject("to")
+                    val fx = if (fromObj.has("xPct")) (fromObj.getDouble("xPct") * drawView.width).toFloat() else fromObj.getDouble("x").toFloat()
+                    val fy = if (fromObj.has("yPct")) (fromObj.getDouble("yPct") * drawView.height).toFloat() else fromObj.getDouble("y").toFloat()
+                    val tx = if (toObj.has("xPct")) (toObj.getDouble("xPct") * drawView.width).toFloat() else toObj.getDouble("x").toFloat()
+                    val ty = if (toObj.has("yPct")) (toObj.getDouble("yPct") * drawView.height).toFloat() else toObj.getDouble("y").toFloat()
+                    
+                    val colorStr = data.optString("color", "#000000")
+                    drawView.drawPartnerStroke(fx, fy, tx, ty, Color.parseColor(colorStr))
                 }
             }
 
@@ -156,9 +156,13 @@ class MainActivity : AppCompatActivity() {
                     if (isDrawing) {
                         currentPath?.quadTo(lastX, lastY, event.x, event.y)
                         
+                        // Отправляем с процентами (xPct, yPct)
+                        val w = width.toDouble()
+                        val h = height.toDouble()
+                        
                         val data = JSONObject().apply {
-                            put("from", JSONObject().put("x", lastX).put("y", lastY))
-                            put("to", JSONObject().put("x", event.x).put("y", event.y))
+                            put("from", JSONObject().put("x", lastX).put("y", lastY).put("xPct", lastX / w).put("yPct", lastY / h))
+                            put("to", JSONObject().put("x", event.x).put("y", event.y).put("xPct", event.x / w).put("yPct", event.y / h))
                             put("color", "#000000")
                         }
                         socket?.emit("draw", data)
