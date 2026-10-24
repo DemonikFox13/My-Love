@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Разрешение на интернет -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="My Love"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.MyLove">
         <activity
             android:name=".MainActivity"
