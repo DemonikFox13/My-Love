@@ -43,14 +43,13 @@ class MainActivity : AppCompatActivity() {
         root.addView(statusText)
 
         setContentView(root)
-
         connectToServer()
     }
 
     private fun connectToServer() {
         try {
             val options = IO.Options()
-            options.query = "role=A"
+            options.query = "role=A" // Роль для телефона
 
             socket = IO.socket(URI.create(SERVER_URL), options)
 
@@ -60,22 +59,14 @@ class MainActivity : AppCompatActivity() {
                     statusText.setTextColor(Color.GREEN)
                 }
             }
-
             socket?.on(Socket.EVENT_DISCONNECT) {
                 runOnUiThread {
                     statusText.text = "ОФЛАЙН"
                     statusText.setTextColor(Color.RED)
                 }
             }
-            
-            socket?.on(Socket.EVENT_CONNECT_ERROR) { args ->
-                runOnUiThread {
-                    statusText.text = "Ошибка сети"
-                    statusText.setTextColor(Color.RED)
-                }
-            }
 
-            // Принимаем историю (в процентах)
+            // Принимаем историю (только проценты)
             socket?.on("history") { args ->
                 val array = args[0] as JSONArray
                 runOnUiThread {
@@ -84,56 +75,50 @@ class MainActivity : AppCompatActivity() {
                         if (stroke.has("from") && stroke.has("to")) {
                             val fromObj = stroke.getJSONObject("from")
                             val toObj = stroke.getJSONObject("to")
-                            // Если пришло в процентах — конвертируем в пиксели экрана
-                            val fx = if (fromObj.has("xPct")) (fromObj.getDouble("xPct") * drawView.width).toFloat() else fromObj.getDouble("x").toFloat()
-                            val fy = if (fromObj.has("yPct")) (fromObj.getDouble("yPct") * drawView.height).toFloat() else fromObj.getDouble("y").toFloat()
-                            val tx = if (toObj.has("xPct")) (toObj.getDouble("xPct") * drawView.width).toFloat() else toObj.getDouble("x").toFloat()
-                            val ty = if (toObj.has("yPct")) (toObj.getDouble("yPct") * drawView.height).toFloat() else toObj.getDouble("y").toFloat()
-                            
-                            val colorStr = stroke.optString("color", "#000000")
-                            drawView.drawPartnerStroke(fx, fy, tx, ty, Color.parseColor(colorStr))
+                            if (fromObj.has("xPct") && toObj.has("xPct")) {
+                                val fx = (fromObj.getDouble("xPct") * drawView.width).toFloat()
+                                val fy = (fromObj.getDouble("yPct") * drawView.height).toFloat()
+                                val tx = (toObj.getDouble("xPct") * drawView.width).toFloat()
+                                val ty = (toObj.getDouble("yPct") * drawView.height).toFloat()
+                                val colorStr = stroke.optString("color", "#000000")
+                                drawView.drawPartnerStroke(fx, fy, tx, ty, Color.parseColor(colorStr))
+                            }
                         }
                     }
                 }
             }
 
-            // Принимаем новые штрихи
+            // Принимаем новые штрихи (только проценты)
             socket?.on("draw") { args ->
                 val data = args[0] as JSONObject
                 runOnUiThread {
                     val fromObj = data.getJSONObject("from")
                     val toObj = data.getJSONObject("to")
-                    val fx = if (fromObj.has("xPct")) (fromObj.getDouble("xPct") * drawView.width).toFloat() else fromObj.getDouble("x").toFloat()
-                    val fy = if (fromObj.has("yPct")) (fromObj.getDouble("yPct") * drawView.height).toFloat() else fromObj.getDouble("y").toFloat()
-                    val tx = if (toObj.has("xPct")) (toObj.getDouble("xPct") * drawView.width).toFloat() else toObj.getDouble("x").toFloat()
-                    val ty = if (toObj.has("yPct")) (toObj.getDouble("yPct") * drawView.height).toFloat() else toObj.getDouble("y").toFloat()
-                    
-                    val colorStr = data.optString("color", "#000000")
-                    drawView.drawPartnerStroke(fx, fy, tx, ty, Color.parseColor(colorStr))
+                    if (fromObj.has("xPct") && toObj.has("xPct")) {
+                        val fx = (fromObj.getDouble("xPct") * drawView.width).toFloat()
+                        val fy = (fromObj.getDouble("yPct") * drawView.height).toFloat()
+                        val tx = (toObj.getDouble("xPct") * drawView.width).toFloat()
+                        val ty = (toObj.getDouble("yPct") * drawView.height).toFloat()
+                        val colorStr = data.optString("color", "#000000")
+                        drawView.drawPartnerStroke(fx, fy, tx, ty, Color.parseColor(colorStr))
+                    }
                 }
             }
 
             socket?.connect()
         } catch (e: Exception) {
-            Log.e("MyLove", "Ошибка подключения: ${e.message}")
             statusText.text = "Ошибка: ${e.message}"
         }
     }
 
     inner class DrawView(context: Context) : View(context) {
         private val paint = Paint().apply {
-            color = Color.BLACK
-            style = Paint.Style.STROKE
-            strokeWidth = 5f
-            isAntiAlias = true
-            strokeCap = Paint.Cap.ROUND
+            color = Color.BLACK; style = Paint.Style.STROKE; strokeWidth = 5f
+            isAntiAlias = true; strokeCap = Paint.Cap.ROUND
         }
-        
         private val partnerPaint = Paint().apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 5f
-            isAntiAlias = true
-            strokeCap = Paint.Cap.ROUND
+            style = Paint.Style.STROKE; strokeWidth = 5f
+            isAntiAlias = true; strokeCap = Paint.Cap.ROUND
         }
 
         private var lastX = 0f
@@ -156,13 +141,13 @@ class MainActivity : AppCompatActivity() {
                     if (isDrawing) {
                         currentPath?.quadTo(lastX, lastY, event.x, event.y)
                         
-                        // Отправляем с процентами (xPct, yPct)
+                        // Отправляем координаты ТОЛЬКО в процентах
                         val w = width.toDouble()
                         val h = height.toDouble()
                         
                         val data = JSONObject().apply {
-                            put("from", JSONObject().put("x", lastX).put("y", lastY).put("xPct", lastX / w).put("yPct", lastY / h))
-                            put("to", JSONObject().put("x", event.x).put("y", event.y).put("xPct", event.x / w).put("yPct", event.y / h))
+                            put("from", JSONObject().put("xPct", lastX / w).put("yPct", lastY / h))
+                            put("to", JSONObject().put("xPct", event.x / w).put("yPct", event.y / h))
                             put("color", "#000000")
                         }
                         socket?.emit("draw", data)
@@ -194,9 +179,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
-            for ((path, p) in paths) {
-                canvas.drawPath(path, p)
-            }
+            for ((path, p) in paths) canvas.drawPath(path, p)
             currentPath?.let { canvas.drawPath(it, paint) }
         }
     }
