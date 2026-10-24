@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Сюда мы программно вставим наш холст (DrawView) -->
+    <FrameLayout
+        android:id="@+id/canvas_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Текст статуса (онлайн/офлайн) -->
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="16dp"
+        android:background="#80000000"
+        android:padding="8dp"
+        android:text="Подключение..."
+        android:textColor="#FF0000"
+        android:textSize="14sp" />
+
+    <!-- Панель инструментов внизу -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#E6FFFFFF"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btn_black"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:backgroundTint="#000000"
+            android:text=""
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/btn_red"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:backgroundTint="#FF0000"
+            android:text=""
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/btn_blue"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:backgroundTint="#0000FF"
+            android:text=""
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/btn_eraser"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1.5"
+            android:text="Стереть"
+            android:textSize="12sp"
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/btn_clear"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1.5"
+            android:text="Очистить"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+</RelativeLayout>
