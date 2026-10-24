@@ -1,15 +1,38 @@
 package com.demonikfox.mylove
 
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.app.AlertDialog
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+    private var filePathCallback: ValueCallback<Array<Uri>>? = null
+
+    // Обработчик выбора файла из галереи для фона
+    private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data = result.data
+            if (data?.data != null) {
+                filePathCallback?.onReceiveValue(arrayOf(data.data!!))
+            } else {
+                filePathCallback?.onReceiveValue(null)
+            }
+        } else {
+            filePathCallback?.onReceiveValue(null)
+        }
+        filePathCallback = null
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,7 +41,6 @@ class MainActivity : AppCompatActivity() {
 
         webView = findViewById(R.id.webview)
         
-        // Очищаем весь кэш при запуске
         webView.clearCache(true)
         webView.clearHistory()
 
@@ -27,14 +49,68 @@ class MainActivity : AppCompatActivity() {
         webSettings.domStorageEnabled = true
         webSettings.databaseEnabled = true
         webSettings.allowFileAccess = true
-        
-        // ОТКЛЮЧАЕМ КЭШ
         webSettings.cacheMode = WebSettings.LOAD_NO_CACHE
         webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
         webView.webViewClient = WebViewClient()
 
-        // Добавляем ?v=1 в конце, чтобы точно обойти кэш
+        // НАСТРОЙКА ВСПЛЫВАЮЩИХ ОКОН И ВЫБОРА ФАЙЛОВ
+        webView.webChromeClient = object : WebChromeClient() {
+            
+            // Окно выбора файла (для фона)
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                this@MainActivity.filePathCallback?.onReceiveValue(null)
+                this@MainActivity.filePathCallback = filePathCallback
+
+                val intent = fileChooserParams?.createIntent()
+                if (intent != null) {
+                    try {
+                        fileChooserLauncher.launch(intent)
+                    } catch (e: Exception) {
+                        this@MainActivity.filePathCallback = null
+                        return false
+                    }
+                    return true
+                }
+                return false
+            }
+
+            // Окно подтверждения (Вы уверены, что хотите очистить?)
+            override fun onJsConfirm(
+                view: WebView?,
+                url: String?,
+                message: String?,
+                result: android.webkit.JsResult?
+            ): Boolean {
+                AlertDialog.Builder(this@MainActivity)
+                    .setMessage(message)
+                    .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm() }
+                    .setNegativeButton(android.R.string.cancel) { _, _ -> result?.cancel() }
+                    .setOnCancelListener { result?.cancel() }
+                    .show()
+                return true
+            }
+
+            // Обычные оповещения (Alert)
+            override fun onJsAlert(
+                view: WebView?,
+                url: String?,
+                message: String?,
+                result: android.webkit.JsResult?
+            ): Boolean {
+                AlertDialog.Builder(this@MainActivity)
+                    .setMessage(message)
+                    .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm() }
+                    .setOnCancelListener { result?.cancel() }
+                    .show()
+                return true
+            }
+        }
+
         webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=A&v=1")
     }
 
