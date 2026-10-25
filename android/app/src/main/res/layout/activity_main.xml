@@ -8,4 +8,18 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- Нативная прозрачная кнопка ПОВЕРХ кнопки фона на сайте -->
+    <Button
+        android:id="@+id/native_bg_btn"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="80dp"
+        android:background="@android:color/transparent"
+        android:text=""
+        android:stateListAnimator="@null"
+        android:elevation="10dp" />
+
 </RelativeLayout>

@@ -6,12 +6,12 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 
@@ -51,18 +51,9 @@ class MainActivity : AppCompatActivity() {
         webSettings.cacheMode = WebSettings.LOAD_NO_CACHE
         webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
-        // Мост для принудительной перерисовки
-        webView.addJavascriptInterface(object {
-            @JavascriptInterface
-            fun forceRedraw() {
-                runOnUiThread {
-                    webView.postInvalidateOnAnimation()
-                }
-            }
-        }, "AndroidBridge")
-
         webView.webViewClient = WebViewClient()
 
+        // Настройка выбора файла (для загрузки фона)
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
                 webView: WebView?,
@@ -83,16 +74,19 @@ class MainActivity : AppCompatActivity() {
                 }
                 return false
             }
+        }
 
-            override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: android.webkit.JsResult?): Boolean {
-                AlertDialog.Builder(this@MainActivity)
-                    .setMessage(message)
-                    .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm() }
-                    .setNegativeButton(android.R.string.cancel) { _, _ -> result?.cancel() }
-                    .setOnCancelListener { result?.cancel() }
-                    .show()
-                return true
-            }
+        // НАША НАТИВНАЯ КНОПКА
+        val nativeBgBtn = findViewById<Button>(R.id.native_bg_btn)
+        nativeBgBtn.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setMessage("Убрать фон у всех?")
+                .setPositiveButton("Да") { _, _ ->
+                    // Даем команду сайту очистить фон и отправить сигнал
+                    webView.evaluateJavascript("window.LDBackground.setFromDataUrl(null); window.LDSocket.emit('clear-background');", null)
+                }
+                .setNegativeButton("Отмена", null)
+                .show()
         }
 
         webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=A&v=1")

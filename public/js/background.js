@@ -26,16 +26,6 @@ window.LDBackground = (() => {
       bgCtx.fillRect(0, 0, W, H);
       bgCtx.drawImage(backgroundImg, x, y, w, h);
     }
-
-    // ЖЕСТКИЙ ТРЮК ДЛЯ WEBVIEW: скрываем и показываем холст, чтобы обновить экран
-    bgCanvas.style.display = 'none';
-    void bgCanvas.offsetHeight; // Принудительный reflow
-    bgCanvas.style.display = 'block';
-
-    // Мост в Android
-    if (window.AndroidBridge && typeof window.AndroidBridge.forceRedraw === 'function') {
-      window.AndroidBridge.forceRedraw();
-    }
   }
 
   function setFromDataUrl(dataUrl) {
@@ -78,37 +68,13 @@ window.LDBackground = (() => {
     input.value = '';
   }
 
-  function clearBackgroundLocalAndRemote() {
-    setFromDataUrl(null); // Сначала локально
-    try { window.LDSocket.emit('clear-background'); } catch(e) {} // Потом на сервер
-  }
-
   function bindEvents() {
     const bgBtn = document.getElementById('bgBtn');
     const bgFile = document.getElementById('bgFile');
 
     bgBtn.addEventListener('click', () => bgFile.click());
     bgFile.addEventListener('change', pickFile);
-
-    let holdTimer = null;
-
-    function holdStart() {
-      clearTimeout(holdTimer);
-      holdTimer = setTimeout(() => {
-        if (confirm('Убрать фон у всех?')) {
-          clearBackgroundLocalAndRemote();
-        }
-      }, 700);
-    }
-
-    function holdEnd() { clearTimeout(holdTimer); }
-
-    bgBtn.addEventListener('touchstart', holdStart, { passive: true });
-    bgBtn.addEventListener('touchend', holdEnd);
-    bgBtn.addEventListener('touchcancel', holdEnd);
-    bgBtn.addEventListener('mousedown', holdStart);
-    bgBtn.addEventListener('mouseup', holdEnd);
-    bgBtn.addEventListener('mouseleave', holdEnd);
+    // Логику долгого нажатия убрали, теперь она нативная
   }
 
   function getImage() { return backgroundImg; }
