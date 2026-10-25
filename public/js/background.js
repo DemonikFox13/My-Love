@@ -7,7 +7,7 @@ window.LDBackground = (() => {
     const W = window.innerWidth, H = window.innerHeight;
     
     if (!backgroundImg) {
-      bgCanvas.width = bgCanvas.width;
+      bgCanvas.width = bgCanvas.width; // Сброс размера, чтобы WebView стер старый рисунок
       bgCtx.fillStyle = '#ffffff';
       bgCtx.fillRect(0, 0, W, H);
     } else {
@@ -21,7 +21,13 @@ window.LDBackground = (() => {
       bgCtx.drawImage(backgroundImg, x, y, w, h);
     }
     
-    window.dispatchEvent(new Event('resize'));
+    // Безопасный хак для принудительной перерисовки в WebView (без бесконечного цикла)
+    bgCanvas.style.opacity = '0.99';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        bgCanvas.style.opacity = '1';
+      });
+    });
   }
 
   function setFromDataUrl(dataUrl) {
@@ -89,10 +95,10 @@ window.LDBackground = (() => {
       holdTimer = setTimeout(() => {
         longPressed = true;
         if (confirm('Убрать фон у всех?')) {
-          // Ждем 700мс, чтобы WebView успел закрыть диалог и проснуться
+          // Ждем 800мс после закрытия окна, чтобы WebView проснулся и не завис
           setTimeout(() => {
             clearBackgroundLocalAndRemote();
-          }, 700);
+          }, 800);
         }
       }, 700);
     }
