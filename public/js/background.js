@@ -2,6 +2,25 @@ window.LDBackground = (() => {
   const { bgCanvas, bgCtx } = window.LDCanvas;
   let backgroundImg = null;
 
+  // Принудительный сброс кэша WebView через переприменение transform
+  function forceRepaint() {
+    if (window.LDPaper && window.LDPaper.apply) {
+      window.LDPaper.apply();
+    }
+    const paper = document.getElementById('paper');
+    if (paper) {
+      const currentTransform = paper.style.transform;
+      paper.style.transform = 'translate(0px, 0px) scale(1)';
+      void paper.offsetHeight; // reflow
+      paper.style.transform = currentTransform;
+    }
+    // Дополнительный трюк для canvas
+    const oldDisplay = bgCanvas.style.display;
+    bgCanvas.style.display = 'none';
+    void bgCanvas.offsetHeight;
+    bgCanvas.style.display = oldDisplay || 'block';
+  }
+
   function redraw() {
     const W = window.innerWidth, H = window.innerHeight;
     const dpr = window.devicePixelRatio || 1;
@@ -26,6 +45,8 @@ window.LDBackground = (() => {
       bgCtx.fillRect(0, 0, W, H);
       bgCtx.drawImage(backgroundImg, x, y, w, h);
     }
+
+    forceRepaint();
   }
 
   function setFromDataUrl(dataUrl) {
@@ -68,13 +89,37 @@ window.LDBackground = (() => {
     input.value = '';
   }
 
+  function clearBackgroundLocalAndRemote() {
+    setFromDataUrl(null);
+    try { window.LDSocket.emit('clear-background'); } catch(e) {}
+  }
+
   function bindEvents() {
     const bgBtn = document.getElementById('bgBtn');
     const bgFile = document.getElementById('bgFile');
 
     bgBtn.addEventListener('click', () => bgFile.click());
     bgFile.addEventListener('change', pickFile);
-    // Логику долгого нажатия убрали, теперь она нативная
+
+    let holdTimer = null;
+
+    function holdStart() {
+      clearTimeout(holdTimer);
+      holdTimer = setTimeout(() => {
+        if (confirm('Убрать фон у всех?')) {
+          clearBackgroundLocalAndRemote();
+        }
+      }, 700);
+    }
+
+    function holdEnd() { clearTimeout(holdTimer); }
+
+    bgBtn.addEventListener('touchstart', holdStart, { passive: true });
+    bgBtn.addEventListener('touchend', holdEnd);
+    bgBtn.addEventListener('touchcancel', holdEnd);
+    bgBtn.addEventListener('mousedown', holdStart);
+    bgBtn.addEventListener('mouseup', holdEnd);
+    bgBtn.addEventListener('mouseleave', holdEnd);
   }
 
   function getImage() { return backgroundImg; }
