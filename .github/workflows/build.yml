@@ -2,9 +2,8 @@ name: Build APK
 
 on:
   push:
-    paths:
-      - 'android/**'
-      - '.github/workflows/build.yml'
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
