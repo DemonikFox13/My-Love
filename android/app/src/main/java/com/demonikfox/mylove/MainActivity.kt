@@ -6,6 +6,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -19,7 +20,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
 
-    // Обработчик выбора файла из галереи для фона
     private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val data = result.data
@@ -40,7 +40,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         webView = findViewById(R.id.webview)
-        
         webView.clearCache(true)
         webView.clearHistory()
 
@@ -52,12 +51,19 @@ class MainActivity : AppCompatActivity() {
         webSettings.cacheMode = WebSettings.LOAD_NO_CACHE
         webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
+        // МОСТ: JS может вызвать AndroidBridge.forceRedraw() чтобы заставить WebView обновиться
+        webView.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun forceRedraw() {
+                runOnUiThread {
+                    webView.invalidate()
+                }
+            }
+        }, "AndroidBridge")
+
         webView.webViewClient = WebViewClient()
 
-        // НАСТРОЙКА ВСПЛЫВАЮЩИХ ОКОН И ВЫБОРА ФАЙЛОВ
         webView.webChromeClient = object : WebChromeClient() {
-            
-            // Окно выбора файла (для фона)
             override fun onShowFileChooser(
                 webView: WebView?,
                 filePathCallback: ValueCallback<Array<Uri>>?,
@@ -65,7 +71,6 @@ class MainActivity : AppCompatActivity() {
             ): Boolean {
                 this@MainActivity.filePathCallback?.onReceiveValue(null)
                 this@MainActivity.filePathCallback = filePathCallback
-
                 val intent = fileChooserParams?.createIntent()
                 if (intent != null) {
                     try {
@@ -79,13 +84,7 @@ class MainActivity : AppCompatActivity() {
                 return false
             }
 
-            // Окно подтверждения (Вы уверены, что хотите очистить?)
-            override fun onJsConfirm(
-                view: WebView?,
-                url: String?,
-                message: String?,
-                result: android.webkit.JsResult?
-            ): Boolean {
+            override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: android.webkit.JsResult?): Boolean {
                 AlertDialog.Builder(this@MainActivity)
                     .setMessage(message)
                     .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm() }
@@ -95,13 +94,7 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
 
-            // Обычные оповещения (Alert)
-            override fun onJsAlert(
-                view: WebView?,
-                url: String?,
-                message: String?,
-                result: android.webkit.JsResult?
-            ): Boolean {
+            override fun onJsAlert(view: WebView?, url: String?, message: String?, result: android.webkit.JsResult?): Boolean {
                 AlertDialog.Builder(this@MainActivity)
                     .setMessage(message)
                     .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm() }
@@ -115,10 +108,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
-        }
+        if (webView.canGoBack()) webView.goBack() else super.onBackPressed()
     }
 }

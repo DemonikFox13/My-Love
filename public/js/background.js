@@ -5,10 +5,14 @@ window.LDBackground = (() => {
   function redraw() {
     const W = window.innerWidth, H = window.innerHeight;
     const dpr = window.devicePixelRatio || 1;
-
-    // Принудительно сбрасываем размер, чтобы очистить ВСЕ пиксели холста
-    bgCanvas.width = bgCanvas.width;
-    bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0); // Восстанавливаем масштаб!
+    
+    // Сбрасываем размер (очищает пиксели)
+    bgCanvas.width = W * dpr;
+    bgCanvas.height = H * dpr;
+    bgCanvas.style.width = W + 'px';
+    bgCanvas.style.height = H + 'px';
+    bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    bgCtx.clearRect(0, 0, W, H);
     
     if (!backgroundImg) {
       bgCtx.fillStyle = '#ffffff';
@@ -23,14 +27,22 @@ window.LDBackground = (() => {
       bgCtx.fillRect(0, 0, W, H);
       bgCtx.drawImage(backgroundImg, x, y, w, h);
     }
+    
+    // ГЛАВНЫЙ ХАК: заставляем WebView перерисоваться через мост
+    try {
+      if (window.AndroidBridge && typeof window.AndroidBridge.forceRedraw === 'function') {
+        window.AndroidBridge.forceRedraw();
+      }
+    } catch(e) {}
+    
+    // Дополнительные трюки для обычных браузеров
+    void bgCanvas.offsetHeight;
+    bgCanvas.style.transform = 'translateZ(0)';
+    setTimeout(() => { bgCanvas.style.transform = ''; }, 16);
   }
 
   function setFromDataUrl(dataUrl) {
-    if (!dataUrl) { 
-      backgroundImg = null; 
-      redraw(); 
-      return; 
-    }
+    if (!dataUrl) { backgroundImg = null; redraw(); return; }
     const img = new Image();
     img.onload = () => { backgroundImg = img; redraw(); };
     img.src = dataUrl;
@@ -64,14 +76,22 @@ window.LDBackground = (() => {
     const file = input.files[0];
     if (!file) return;
     const dataUrl = await compressFile(file);
+    // 1. Сначала локально — работает даже без интернета
     setFromDataUrl(dataUrl);
-    window.LDSocket.emit('set-background', dataUrl);
+    // 2. Потом синхронизация с партнёром (в фоне)
+    try { window.LDSocket.emit('set-background', dataUrl); } catch(e) {}
     input.value = '';
   }
 
+  // ЛОКАЛЬНАЯ очистка (работает всегда, даже офлайн)
+  function clearBackgroundLocal() {
+    setFromDataUrl(null);
+  }
+
+  // Очистка + синхронизация с партнёром (если есть интернет)
   function clearBackgroundLocalAndRemote() {
-    setFromDataUrl(null); // Очищает локально (работает даже без интернета)
-    window.LDSocket.emit('clear-background'); // Отправляет весточку на сервер
+    clearBackgroundLocal();
+    try { window.LDSocket.emit('clear-background'); } catch(e) {}
   }
 
   function bindEvents() {
@@ -90,10 +110,9 @@ window.LDBackground = (() => {
       holdTimer = setTimeout(() => {
         longPressed = true;
         if (confirm('Убрать фон у всех?')) {
-          // Ждем 1 секунду после закрытия окна, чтобы WebView проснулся
           setTimeout(() => {
             clearBackgroundLocalAndRemote();
-          }, 1000);
+          }, 500);
         }
       }, 700);
     }
@@ -109,6 +128,5 @@ window.LDBackground = (() => {
   }
 
   function getImage() { return backgroundImg; }
-
   return { redraw, setFromDataUrl, bindEvents, getImage };
 })();
