@@ -6,7 +6,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.View
+import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -40,10 +40,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         webView = findViewById(R.id.webview)
-        
-        // ГЛАВНЫЙ ФИКС: отключаем аппаратное ускорение (лечит баг с невидимой очисткой)
-        webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-
         webView.clearCache(true)
         webView.clearHistory()
 
@@ -54,6 +50,16 @@ class MainActivity : AppCompatActivity() {
         webSettings.allowFileAccess = true
         webSettings.cacheMode = WebSettings.LOAD_NO_CACHE
         webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+        // Мост для принудительной перерисовки
+        webView.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun forceRedraw() {
+                runOnUiThread {
+                    webView.postInvalidateOnAnimation()
+                }
+            }
+        }, "AndroidBridge")
 
         webView.webViewClient = WebViewClient()
 

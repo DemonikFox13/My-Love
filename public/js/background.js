@@ -6,7 +6,6 @@ window.LDBackground = (() => {
     const W = window.innerWidth, H = window.innerHeight;
     const dpr = window.devicePixelRatio || 1;
     
-    // Полный сброс и очистка
     bgCanvas.width = W * dpr;
     bgCanvas.height = H * dpr;
     bgCanvas.style.width = W + 'px';
@@ -26,6 +25,16 @@ window.LDBackground = (() => {
       bgCtx.fillStyle = '#000';
       bgCtx.fillRect(0, 0, W, H);
       bgCtx.drawImage(backgroundImg, x, y, w, h);
+    }
+
+    // ЖЕСТКИЙ ТРЮК ДЛЯ WEBVIEW: скрываем и показываем холст, чтобы обновить экран
+    bgCanvas.style.display = 'none';
+    void bgCanvas.offsetHeight; // Принудительный reflow
+    bgCanvas.style.display = 'block';
+
+    // Мост в Android
+    if (window.AndroidBridge && typeof window.AndroidBridge.forceRedraw === 'function') {
+      window.AndroidBridge.forceRedraw();
     }
   }
 
@@ -70,7 +79,7 @@ window.LDBackground = (() => {
   }
 
   function clearBackgroundLocalAndRemote() {
-    setFromDataUrl(null); // Сначала локально (работает офлайн)
+    setFromDataUrl(null); // Сначала локально
     try { window.LDSocket.emit('clear-background'); } catch(e) {} // Потом на сервер
   }
 
