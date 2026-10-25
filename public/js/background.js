@@ -3,11 +3,14 @@ window.LDBackground = (() => {
   let backgroundImg = null;
 
   function redraw() {
-    bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
     const W = window.innerWidth, H = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+
+    // Принудительно сбрасываем размер, чтобы очистить ВСЕ пиксели холста
+    bgCanvas.width = bgCanvas.width;
+    bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0); // Восстанавливаем масштаб!
     
     if (!backgroundImg) {
-      bgCanvas.width = bgCanvas.width; // Сброс размера, чтобы WebView стер старый рисунок
       bgCtx.fillStyle = '#ffffff';
       bgCtx.fillRect(0, 0, W, H);
     } else {
@@ -67,43 +70,8 @@ window.LDBackground = (() => {
   }
 
   function clearBackgroundLocalAndRemote() {
-    setFromDataUrl(null);
-    window.LDSocket.emit('clear-background');
-  }
-
-  // НАШ КОСТЫЛЬ: Своё HTML-окно вместо системного
-  function showCustomConfirm(message, onYes) {
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
-    
-    const box = document.createElement('div');
-    box.style.cssText = 'background:#fff;padding:20px;border-radius:12px;text-align:center;max-width:80%;box-shadow:0 4px 15px rgba(0,0,0,0.2);';
-    
-    const text = document.createElement('p');
-    text.innerText = message;
-    text.style.cssText = 'margin:0 0 20px 0;font-size:16px;color:#333;font-weight:bold;';
-    
-    const btnYes = document.createElement('button');
-    btnYes.innerText = 'Да';
-    btnYes.style.cssText = 'margin-right:10px;padding:10px 20px;background:#ff4757;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;';
-    
-    const btnNo = document.createElement('button');
-    btnNo.innerText = 'Отмена';
-    btnNo.style.cssText = 'padding:10px 20px;background:#f1f2f6;color:#333;border:none;border-radius:8px;font-size:16px;cursor:pointer;';
-    
-    btnYes.onclick = () => {
-      document.body.removeChild(overlay);
-      onYes();
-    };
-    btnNo.onclick = () => {
-      document.body.removeChild(overlay);
-    };
-    
-    box.appendChild(text);
-    box.appendChild(btnYes);
-    box.appendChild(btnNo);
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
+    setFromDataUrl(null); // Очищает локально (работает даже без интернета)
+    window.LDSocket.emit('clear-background'); // Отправляет весточку на сервер
   }
 
   function bindEvents() {
@@ -121,10 +89,12 @@ window.LDBackground = (() => {
       clearTimeout(holdTimer);
       holdTimer = setTimeout(() => {
         longPressed = true;
-        // Вместо системного confirm() используем наше окно
-        showCustomConfirm('Убрать фон у всех?', () => {
-          clearBackgroundLocalAndRemote();
-        });
+        if (confirm('Убрать фон у всех?')) {
+          // Ждем 1 секунду после закрытия окна, чтобы WebView проснулся
+          setTimeout(() => {
+            clearBackgroundLocalAndRemote();
+          }, 1000);
+        }
       }, 700);
     }
 
