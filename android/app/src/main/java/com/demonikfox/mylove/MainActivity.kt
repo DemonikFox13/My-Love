@@ -83,7 +83,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=A&v=1")
+        webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=A&v=2")
     }
 
     override fun onBackPressed() {

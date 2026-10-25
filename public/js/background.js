@@ -1,37 +1,46 @@
 window.LDBackground = (() => {
   const { bgCanvas, bgCtx } = window.LDCanvas;
   let backgroundImg = null;
+  let currentDataUrl = null;
 
-  // Принудительный сброс кэша WebView через переприменение transform
-  function forceRepaint() {
-    if (window.LDPaper && window.LDPaper.apply) {
-      window.LDPaper.apply();
+  // bgCanvas СКРЫТ визуально. Он используется только для getImageData (пипетка/галерея).
+  // Отображение фона идёт через <img id="bgImg">.
+  bgCanvas.style.visibility = 'hidden';
+
+  function replaceBgImg() {
+    const oldImg = document.getElementById('bgImg');
+    const newImg = document.createElement('img');
+    newImg.id = 'bgImg';
+    newImg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center;pointer-events:none;';
+    
+    if (currentDataUrl) {
+      newImg.src = currentDataUrl;
+      newImg.style.background = '#000';
+    } else {
+      // Пустой фон: белый
+      newImg.style.background = '#ffffff';
     }
-    const paper = document.getElementById('paper');
-    if (paper) {
-      const currentTransform = paper.style.transform;
-      paper.style.transform = 'translate(0px, 0px) scale(1)';
-      void paper.offsetHeight; // reflow
-      paper.style.transform = currentTransform;
+
+    if (oldImg && oldImg.parentNode) {
+      oldImg.parentNode.replaceChild(newImg, oldImg);
+    } else {
+      const paper = document.getElementById('paper');
+      if (paper) paper.insertBefore(newImg, paper.firstChild);
     }
-    // Дополнительный трюк для canvas
-    const oldDisplay = bgCanvas.style.display;
-    bgCanvas.style.display = 'none';
-    void bgCanvas.offsetHeight;
-    bgCanvas.style.display = oldDisplay || 'block';
   }
 
   function redraw() {
     const W = window.innerWidth, H = window.innerHeight;
     const dpr = window.devicePixelRatio || 1;
-    
+
+    // Данные для пипетки/галереи — на скрытом bgCanvas
     bgCanvas.width = W * dpr;
     bgCanvas.height = H * dpr;
     bgCanvas.style.width = W + 'px';
     bgCanvas.style.height = H + 'px';
     bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     bgCtx.clearRect(0, 0, W, H);
-    
+
     if (!backgroundImg) {
       bgCtx.fillStyle = '#ffffff';
       bgCtx.fillRect(0, 0, W, H);
@@ -46,11 +55,17 @@ window.LDBackground = (() => {
       bgCtx.drawImage(backgroundImg, x, y, w, h);
     }
 
-    forceRepaint();
+    // Отображение — пересоздаём <img>. WebView это 100% перерисует.
+    replaceBgImg();
   }
 
   function setFromDataUrl(dataUrl) {
-    if (!dataUrl) { backgroundImg = null; redraw(); return; }
+    currentDataUrl = dataUrl;
+    if (!dataUrl) {
+      backgroundImg = null;
+      redraw();
+      return;
+    }
     const img = new Image();
     img.onload = () => { backgroundImg = img; redraw(); };
     img.src = dataUrl;
@@ -85,7 +100,7 @@ window.LDBackground = (() => {
     if (!file) return;
     const dataUrl = await compressFile(file);
     setFromDataUrl(dataUrl);
-    window.LDSocket.emit('set-background', dataUrl);
+    try { window.LDSocket.emit('set-background', dataUrl); } catch(e) {}
     input.value = '';
   }
 
@@ -123,5 +138,9 @@ window.LDBackground = (() => {
   }
 
   function getImage() { return backgroundImg; }
+
+  // Создаём bgImg при старте
+  replaceBgImg();
+
   return { redraw, setFromDataUrl, bindEvents, getImage };
 })();
