@@ -6,7 +6,7 @@ window.LDBackground = (() => {
     const W = window.innerWidth, H = window.innerHeight;
     const dpr = window.devicePixelRatio || 1;
     
-    // Сбрасываем размер (очищает пиксели)
+    // Полный сброс и очистка
     bgCanvas.width = W * dpr;
     bgCanvas.height = H * dpr;
     bgCanvas.style.width = W + 'px';
@@ -27,18 +27,6 @@ window.LDBackground = (() => {
       bgCtx.fillRect(0, 0, W, H);
       bgCtx.drawImage(backgroundImg, x, y, w, h);
     }
-    
-    // ГЛАВНЫЙ ХАК: заставляем WebView перерисоваться через мост
-    try {
-      if (window.AndroidBridge && typeof window.AndroidBridge.forceRedraw === 'function') {
-        window.AndroidBridge.forceRedraw();
-      }
-    } catch(e) {}
-    
-    // Дополнительные трюки для обычных браузеров
-    void bgCanvas.offsetHeight;
-    bgCanvas.style.transform = 'translateZ(0)';
-    setTimeout(() => { bgCanvas.style.transform = ''; }, 16);
   }
 
   function setFromDataUrl(dataUrl) {
@@ -76,22 +64,14 @@ window.LDBackground = (() => {
     const file = input.files[0];
     if (!file) return;
     const dataUrl = await compressFile(file);
-    // 1. Сначала локально — работает даже без интернета
     setFromDataUrl(dataUrl);
-    // 2. Потом синхронизация с партнёром (в фоне)
-    try { window.LDSocket.emit('set-background', dataUrl); } catch(e) {}
+    window.LDSocket.emit('set-background', dataUrl);
     input.value = '';
   }
 
-  // ЛОКАЛЬНАЯ очистка (работает всегда, даже офлайн)
-  function clearBackgroundLocal() {
-    setFromDataUrl(null);
-  }
-
-  // Очистка + синхронизация с партнёром (если есть интернет)
   function clearBackgroundLocalAndRemote() {
-    clearBackgroundLocal();
-    try { window.LDSocket.emit('clear-background'); } catch(e) {}
+    setFromDataUrl(null); // Сначала локально (работает офлайн)
+    try { window.LDSocket.emit('clear-background'); } catch(e) {} // Потом на сервер
   }
 
   function bindEvents() {
@@ -102,17 +82,12 @@ window.LDBackground = (() => {
     bgFile.addEventListener('change', pickFile);
 
     let holdTimer = null;
-    let longPressed = false;
 
     function holdStart() {
-      longPressed = false;
       clearTimeout(holdTimer);
       holdTimer = setTimeout(() => {
-        longPressed = true;
         if (confirm('Убрать фон у всех?')) {
-          setTimeout(() => {
-            clearBackgroundLocalAndRemote();
-          }, 500);
+          clearBackgroundLocalAndRemote();
         }
       }, 700);
     }
