@@ -805,3 +805,38 @@ body.clean-view #handOverlay { display: block; pointer-events: auto; }
   -webkit-mask-image: radial-gradient(circle, #000 50%, transparent 50%) !important;
   mask-image: radial-gradient(circle, #000 50%, transparent 50%) !important;
 }
+
+
+/* === HARD FIX === */
+.picker-view {
+  position: relative !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  line-height: 0 !important;
+  display: block !important;
+}
+
+.wheel-cursor, .hue-cursor, .sv-cursor {
+  position: absolute !important;
+  border: 2px solid #fff !important;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.8) !important;
+  border-radius: 50% !important;
+  width: 16px !important;
+  height: 16px !important;
+  transform: translate(-50%, -50%) !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 100 !important;
+}
+
+.color-picker {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  transform: translateZ(0) !important;
+  -webkit-mask-image: radial-gradient(circle, #000 50%, transparent 50%) !important;
+  mask-image: radial-gradient(circle, #000 50%, transparent 50%) !important;
+}
