@@ -14,11 +14,9 @@ window.LDHistory = (() => {
 
   function add(action) {
     if (!action) return;
-    // Помечаем действие, если оно появилось ПОСЛЕ отката
     action._afterUndo = redoStack.length > 0;
     undoStack.push(action);
     if (undoStack.length > MAX) undoStack.shift();
-    // redoStack НЕ очищаем — пользователь сам решит через долгий тап
     refresh();
   }
 
@@ -31,19 +29,13 @@ window.LDHistory = (() => {
     return true;
   }
 
-  // force = true — вызывается при долгом нажатии
   function redo(force) {
     if (!redoStack.length) return false;
 
-    // Проверяем, есть ли сверху undo "новые действия после отката"
     const hasAfterUndo = undoStack.length > 0 && undoStack[undoStack.length - 1]._afterUndo;
 
     if (hasAfterUndo) {
-      if (!force) {
-        // Короткое нажатие — не удаляем новое действие, возвращаем статус
-        return 'blocked';
-      }
-      // Долгое нажатие — удаляем все "новые" с вершины
+      if (!force) return 'blocked';
       while (undoStack.length && undoStack[undoStack.length - 1]._afterUndo) {
         undoStack.pop();
       }

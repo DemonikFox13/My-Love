@@ -96,10 +96,10 @@
     clearTimeout(redoTimer);
     redoTimer = setTimeout(() => {
       redoLongPressed = true;
-
       const all = window.LDHistory.getAll();
       const last = all[all.length - 1];
 
+      // Если на вершине clear — восстанавливаем холст
       if (last && last.type === 'clear') {
         window.LDHistory.undo();
         const strokes = [];
@@ -113,12 +113,14 @@
         return;
       }
 
+      // Иначе — redo с удалением новых действий
       const res = window.LDHistory.redo(true);
       if (res === true) {
         window.LDEmojis.showToast('Новое действие удалено, откат вперёд', 'success');
       }
     }, 500);
   }
+
   function redoEnd() { clearTimeout(redoTimer); }
 
   redoBtn.addEventListener('touchstart', redoStart, { passive: true });
@@ -130,9 +132,19 @@
 
   redoBtn.addEventListener('click', (e) => {
     if (redoLongPressed) { e.preventDefault(); e.stopPropagation(); return; }
+
+    const all = window.LDHistory.getAll();
+    const last = all[all.length - 1];
+
+    // Если на вершине clear — подсказываем зажать
+    if (last && last.type === 'clear') {
+      if (window.LDEmojis) window.LDEmojis.showToast('Зажмите ↪, чтобы восстановить холст', 'success');
+      return;
+    }
+
     const res = window.LDHistory.redo(false);
     if (res === 'blocked') {
-      window.LDEmojis.showToast('Зажми ↪, чтобы удалить новое действие и вернуть старое');
+      if (window.LDEmojis) window.LDEmojis.showToast('Зажмите ↪, чтобы удалить новое действие и вернуть старое', 'success');
     }
   });
 
