@@ -236,7 +236,7 @@ window.LDCanvas = (() => {
     try { boardData = ctx.getImageData(0, 0, W, H); } catch (e) { return; }
     const data = boardData.data;
 
-    // Барьеры — фигуры, текст, лапки (стены для заливки)
+    // Барьеры — фигуры, текст, лапки
     let barrierData = null;
     try {
       const tmp = document.createElement('canvas');
@@ -257,29 +257,29 @@ window.LDCanvas = (() => {
     const tR = data[startIdx], tG = data[startIdx+1], tB = data[startIdx+2], tA = data[startIdx+3];
     if (tR === rgb.r && tG === rgb.g && tB === rgb.b && tA === 255) return;
 
-    // ДИАГНОСТИКА
-    const ids = ['board','shapesCanvas','textCanvas','pawsCanvas','bgCanvas'];
-    const sizes = ids.map(function(id) {
-      const el = document.getElementById(id);
-      return id + ':' + (el ? (el.width + 'x' + el.height) : 'NULL');
-    }).join('\n');
-    alert('board W=' + W + ' H=' + H + '\n' +
-          'startAlpha=' + data[startIdx+3] + '\n\n' +
-          sizes);
-
     const visited = new Uint8Array(W * H);
     const stack = [startPixel];
     visited[startPixel] = 1;
     const totalPixels = W * H;
+    const TOL = 30; // Допуск для цвета (чтобы залить полупрозрачные края)
 
     while (stack.length) {
       const idx = stack.pop();
       const p = idx * 4;
 
-      // Барьер (фигура/текст/лапка) — не заливаем
       if (barrierData && barrierData[p + 3] > 10) continue;
-      // Не тот цвет — стена
-      if (data[p] !== tR || data[p+1] !== tG || data[p+2] !== tB || data[p+3] !== tA) continue;
+
+      const dr = Math.abs(data[p] - tR);
+      const dg = Math.abs(data[p+1] - tG);
+      const db = Math.abs(data[p+2] - tB);
+      const da = Math.abs(data[p+3] - tA);
+
+      if (dr > TOL || dg > TOL || db > TOL || da > TOL) {
+        // ХАК ДЛЯ АНТИАЛИАСИНГА: если мы заливаем прозрачный фон, 
+        // а пиксель — это полупрозрачный край линии (антиалиасинг), мы его заливаем!
+        const isAntiAliasEdge = (tA === 0 && data[p+3] > 0 && data[p+3] < 250);
+        if (!isAntiAliasEdge) continue; // Если это не край, то это стена — останавливаемся
+      }
 
       data[p] = rgb.r; data[p+1] = rgb.g; data[p+2] = rgb.b; data[p+3] = 255;
 
