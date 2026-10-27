@@ -798,3 +798,10 @@ body.clean-view #handOverlay { display: block; pointer-events: auto; }
   clip-path: circle(50%) !important;
   -webkit-clip-path: circle(50%) !important;
 }
+
+
+/* === FIX v2: mask-image для тулбара === */
+.color-picker {
+  -webkit-mask-image: radial-gradient(circle, #000 50%, transparent 50%) !important;
+  mask-image: radial-gradient(circle, #000 50%, transparent 50%) !important;
+}
