@@ -777,3 +777,24 @@ body.clean-view #cleanViewExit {
 }
 body.clean-view #paper > #board { pointer-events: none; }
 body.clean-view #handOverlay { display: block; pointer-events: auto; }
+
+
+/* === FIX: palette alignment + toolbar clip === */
+.picker-view {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.picker-view canvas {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.wheel-cursor, .hue-cursor, .sv-cursor {
+  box-sizing: border-box !important;
+  border-width: 2px !important;
+}
+.color-picker {
+  overflow: hidden !important;
+  clip-path: circle(50%) !important;
+  -webkit-clip-path: circle(50%) !important;
+}
