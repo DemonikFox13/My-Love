@@ -80,7 +80,20 @@
   updateUndoRedoButtons(false, false);
 
   document.getElementById('undoBtn').addEventListener('click', () => {
+    const all = window.LDHistory.getAll();
+    const last = all[all.length - 1];
+    const wasClear = last && last.type === 'clear';
     window.LDHistory.undo();
+    if (wasClear) {
+      const strokes = [];
+      for (const a of window.LDHistory.getAll()) {
+        if (a.type === 'strokes') for (const s of a.data) strokes.push(s);
+      }
+      if (strokes.length) {
+        try { window.LDSocket.emit('draw-batch', strokes); } catch(e) {}
+      }
+      if (window.LDEmojis) window.LDEmojis.showToast('Холст восстановлен', 'success');
+    }
   });
 
   const redoBtn = document.getElementById('redoBtn');
@@ -92,6 +105,23 @@
     clearTimeout(redoTimer);
     redoTimer = setTimeout(() => {
       redoLongPressed = true;
+
+      const all = window.LDHistory.getAll();
+      const last = all[all.length - 1];
+
+      if (last && last.type === 'clear') {
+        window.LDHistory.undo();
+        const strokes = [];
+        for (const a of window.LDHistory.getAll()) {
+          if (a.type === 'strokes') for (const s of a.data) strokes.push(s);
+        }
+        if (strokes.length) {
+          try { window.LDSocket.emit('draw-batch', strokes); } catch(e) {}
+        }
+        if (window.LDEmojis) window.LDEmojis.showToast('Холст восстановлен', 'success');
+        return;
+      }
+
       const res = window.LDHistory.redo(true);
       if (res === true) {
         window.LDEmojis.showToast('Новое действие удалено, откат вперёд', 'success');
