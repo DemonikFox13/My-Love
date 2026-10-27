@@ -257,6 +257,17 @@ window.LDCanvas = (() => {
     const tR = data[startIdx], tG = data[startIdx+1], tB = data[startIdx+2], tA = data[startIdx+3];
     if (tR === rgb.r && tG === rgb.g && tB === rgb.b && tA === 255) return;
 
+    // ДИАГНОСТИКА
+    let barrierCount = 0;
+    if (barrierData) {
+      for (let i = 3; i < barrierData.length; i += 4) if (barrierData[i] > 10) barrierCount++;
+    }
+    alert('W=' + W + ' H=' + H + '\n' +
+          'barrierData=' + (barrierData ? 'YES' : 'NULL') + '\n' +
+          'barrierPixels=' + barrierCount + '\n' +
+          'startAlpha=' + data[startIdx+3] + '\n' +
+          'startBarrierAlpha=' + (barrierData ? barrierData[startIdx+3] : 'n/a'));
+
     const visited = new Uint8Array(W * H);
     const stack = [startPixel];
     visited[startPixel] = 1;
