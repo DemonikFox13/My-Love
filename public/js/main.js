@@ -74,7 +74,11 @@
 
   function updateUndoRedoButtons(canUndo, canRedo) {
     document.getElementById('undoBtn').disabled = !canUndo;
-    document.getElementById('redoBtn').disabled = !canRedo;
+    // Разблокируем ↪, если на вершине истории лежит 'clear' — чтобы можно было восстановить холст
+    const all = window.LDHistory ? window.LDHistory.getAll() : [];
+    const last = all[all.length - 1];
+    const hasClearOnTop = last && last.type === 'clear';
+    document.getElementById('redoBtn').disabled = !(canRedo || hasClearOnTop);
   }
   window.LDHistory.setUpdateButtons(updateUndoRedoButtons);
   updateUndoRedoButtons(false, false);
