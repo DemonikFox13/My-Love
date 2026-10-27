@@ -227,26 +227,60 @@ window.LDCanvas = (() => {
   }
 
   function floodFill(x, y, color) {
-    const W = canvas.width, H = canvas.height, px = Math.round(x * dpr), py = Math.round(y * dpr);
+    const W = canvas.width, H = canvas.height;
+    const px = Math.round(x * dpr), py = Math.round(y * dpr);
     if (px < 0 || px >= W || py < 0 || py >= H) return;
     const rgb = hexToRgb(color); if (!rgb) return;
-    let imgData; try { imgData = ctx.getImageData(0, 0, W, H); } catch (e) { return; }
-    const data = imgData.data, startIdx = (py * W + px) * 4;
+
+    let boardData;
+    try { boardData = ctx.getImageData(0, 0, W, H); } catch (e) { return; }
+    const data = boardData.data;
+
+    // Барьеры — фигуры, текст, лапки (стены для заливки)
+    let barrierData = null;
+    try {
+      const tmp = document.createElement('canvas');
+      tmp.width = W; tmp.height = H;
+      const tctx = tmp.getContext('2d');
+      ['shapesCanvas', 'textCanvas', 'pawsCanvas'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) { try { tctx.drawImage(el, 0, 0); } catch (e) {} }
+      });
+      barrierData = tctx.getImageData(0, 0, W, H).data;
+    } catch (e) { barrierData = null; }
+
+    const startPixel = py * W + px;
+    const startIdx = startPixel * 4;
+
+    if (barrierData && barrierData[startIdx + 3] > 10) return;
+
     const tR = data[startIdx], tG = data[startIdx+1], tB = data[startIdx+2], tA = data[startIdx+3];
     if (tR === rgb.r && tG === rgb.g && tB === rgb.b && tA === 255) return;
-    
-    const visited = new Uint8Array(W * H), stack = [px, py]; let iter = 0;
+
+    const visited = new Uint8Array(W * H);
+    const stack = [startPixel];
+    visited[startPixel] = 1;
+    const totalPixels = W * H;
+
     while (stack.length) {
-      if (++iter > W * H * 2) break;
-      const cy = stack.pop(), cx = stack.pop();
-      if (cx < 0 || cx >= W || cy < 0 || cy >= H) continue;
-      const idx = cy * W + cx; if (visited[idx]) continue; visited[idx] = 1;
+      const idx = stack.pop();
       const p = idx * 4;
+
+      // Барьер (фигура/текст/лапка) — не заливаем
+      if (barrierData && barrierData[p + 3] > 10) continue;
+      // Не тот цвет — стена
       if (data[p] !== tR || data[p+1] !== tG || data[p+2] !== tB || data[p+3] !== tA) continue;
+
       data[p] = rgb.r; data[p+1] = rgb.g; data[p+2] = rgb.b; data[p+3] = 255;
-      stack.push(cx+1, cy, cx-1, cy, cx, cy+1, cx, cy-1);
+
+      const cx = idx % W;
+      if (cx + 1 < W)    { const n = idx + 1; if (!visited[n]) { visited[n] = 1; stack.push(n); } }
+      if (cx - 1 >= 0)   { const n = idx - 1; if (!visited[n]) { visited[n] = 1; stack.push(n); } }
+      if (idx + W < totalPixels) { const n = idx + W; if (!visited[n]) { visited[n] = 1; stack.push(n); } }
+      if (idx - W >= 0)  { const n = idx - W; if (!visited[n]) { visited[n] = 1; stack.push(n); } }
     }
-    ctx.putImageData(imgData, 0, 0);
+
+    ctx.putImageData(boardData, 0, 0);
   }
 
   function emitFill(x, y, color) {
