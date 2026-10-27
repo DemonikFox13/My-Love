@@ -84,20 +84,7 @@
   updateUndoRedoButtons(false, false);
 
   document.getElementById('undoBtn').addEventListener('click', () => {
-    const all = window.LDHistory.getAll();
-    const last = all[all.length - 1];
-    const wasClear = last && last.type === 'clear';
     window.LDHistory.undo();
-    if (wasClear) {
-      const strokes = [];
-      for (const a of window.LDHistory.getAll()) {
-        if (a.type === 'strokes') for (const s of a.data) strokes.push(s);
-      }
-      if (strokes.length) {
-        try { window.LDSocket.emit('draw-batch', strokes); } catch(e) {}
-      }
-      if (window.LDEmojis) window.LDEmojis.showToast('Холст восстановлен', 'success');
-    }
   });
 
   const redoBtn = document.getElementById('redoBtn');
