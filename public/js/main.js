@@ -189,13 +189,17 @@
   window.LDSocket.on('clear-background', () => window.LDBackground.setFromDataUrl(null));
 
   document.getElementById('clearBtn').addEventListener('click', () => {
-    if (confirm('Очистить холст у всех?')) {
-      if (window.LDCanvas.exitSpecialModes) window.LDCanvas.exitSpecialModes();
-      if (window.LDPresets && window.LDPresets.reset) {
-        window.LDPresets.reset();
-      }
-      window.LDSocket.emit('clear');
-    }
+    // 1. Локальная очистка — работает без интернета и без confirm()
+    if (window.LDCanvas.exitSpecialModes) window.LDCanvas.exitSpecialModes();
+    if (window.LDPresets && window.LDPresets.reset) window.LDPresets.reset();
+    window.LDCanvas.clearSilent();
+    window.LDTextCanvas.clearAll();
+    window.LDShapesCanvas.clearAll();
+    window.LDCanvas.clearPaws();
+    // 2. Добавляем в историю как одно действие (чтобы ↪ мог отменить)
+    if (window.LDHistory) window.LDHistory.add({ type: 'clear', data: {} });
+    // 3. Отправляем партнёру (если есть сеть)
+    try { window.LDSocket.emit('clear'); } catch(e) {}
   });
 
   const sizeSlider = document.getElementById('size');

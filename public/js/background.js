@@ -121,9 +121,8 @@ window.LDBackground = (() => {
     function holdStart() {
       clearTimeout(holdTimer);
       holdTimer = setTimeout(() => {
-        if (confirm('Убрать фон у всех?')) {
-          clearBackgroundLocalAndRemote();
-        }
+        // Локальная очистка без confirm()
+        clearBackgroundLocalAndRemote();
       }, 700);
     }
 
