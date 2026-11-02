@@ -4,12 +4,24 @@ window.LDHistory = (() => {
   let redoStack = [];
   let rebuildFn = null;
   let updateButtons = null;
+  let rebuildScheduled = false;
 
   function setRebuildFn(fn) { rebuildFn = fn; }
   function setUpdateButtons(fn) { updateButtons = fn; }
 
   function refresh() {
     if (updateButtons) updateButtons(canUndo(), canRedo());
+  }
+
+  // Защита от зависаний при быстром клике
+  function scheduleRebuild() {
+    if (rebuildScheduled) return;
+    rebuildScheduled = true;
+    // Ждем 1 кадр (16мс), чтобы все быстрые клики слились в один пересчет
+    requestAnimationFrame(() => {
+      if (rebuildFn) rebuildFn(undoStack.slice());
+      rebuildScheduled = false;
+    });
   }
 
   function add(action) {
@@ -24,7 +36,7 @@ window.LDHistory = (() => {
     if (!undoStack.length) return false;
     const a = undoStack.pop();
     redoStack.push(a);
-    if (rebuildFn) rebuildFn(undoStack.slice());
+    scheduleRebuild();
     refresh();
     return true;
   }
@@ -43,7 +55,7 @@ window.LDHistory = (() => {
 
     const a = redoStack.pop();
     undoStack.push(a);
-    if (rebuildFn) rebuildFn(undoStack.slice());
+    scheduleRebuild();
     refresh();
     return true;
   }
