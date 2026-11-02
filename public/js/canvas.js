@@ -142,13 +142,15 @@ window.LDCanvas = (() => {
   }
 
   function getLocalCoords(p) {
-    let sx = p.x, sy = p.y;
+    // Если есть проценты (чужие штрихи или текущее рисование) — переводим
     if (p.xPct !== undefined && p.yPct !== undefined) {
-      sx = p.xPct * window.innerWidth;
-      sy = p.yPct * window.innerHeight;
+      let sx = p.xPct * window.innerWidth;
+      let sy = p.yPct * window.innerHeight;
+      if (window.LDPaper) return window.LDPaper.screenToLocal(canvas, sx, sy);
+      return { x: sx, y: sy };
     }
-    if (window.LDPaper) return window.LDPaper.screenToLocal(canvas, sx, sy);
-    return { x: sx, y: sy };
+    // Если есть только локальные (свои штрихи при rebuild) — отдаём как есть
+    return { x: p.x || 0, y: p.y || 0 };
   }
 
   function drawSegment(from, to, color, width, isEraser) {

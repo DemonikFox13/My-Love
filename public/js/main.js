@@ -22,10 +22,13 @@
       }
       return;
     }
+    // Чужие штрихи — только по процентам (xPct)
+    const from = { xPct: s.from.xPct, yPct: s.from.yPct };
+    const to = { xPct: s.to.xPct, yPct: s.to.yPct };
     if (s.isEraser && s.eraserFilter) {
-      window.LDCanvas.eraseFiltered(s.from, s.to, s.width || 3, s.eraserFilter);
+      window.LDCanvas.eraseFiltered(from, to, s.width || 3, s.eraserFilter);
     } else {
-      window.LDCanvas.drawSegment(s.from, s.to, s.color, s.width || 3, !!s.isEraser);
+      window.LDCanvas.drawSegment(from, to, s.color, s.width || 3, !!s.isEraser);
     }
   }
 
@@ -48,10 +51,13 @@
               }
               continue;
             }
+            // Свои штрихи при undo/redo — по локальным координатам (x, y)
+            const from = { x: s.from.x, y: s.from.y };
+            const to = { x: s.to.x, y: s.to.y };
             if (s.isEraser && s.eraserFilter) {
-              window.LDCanvas.eraseFiltered(s.from, s.to, s.width || 3, s.eraserFilter);
+              window.LDCanvas.eraseFiltered(from, to, s.width || 3, s.eraserFilter);
             } else {
-              window.LDCanvas.drawSegment(s.from, s.to, s.color, s.width || 3, !!s.isEraser);
+              window.LDCanvas.drawSegment(from, to, s.color, s.width || 3, !!s.isEraser);
             }
           }
           break;
