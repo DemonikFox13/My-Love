@@ -155,11 +155,9 @@ window.LDCanvas = (() => {
 
   function drawSegment(from, to, color, width, isEraser) {
     const f = getLocalCoords(from), t = getLocalCoords(to);
-    const paperScale = (window.LDPaper && window.LDPaper.getState) ? window.LDPaper.getState().scale : 1;
     ctx.save(); ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
     ctx.strokeStyle = color || '#000000';
-    // Толщина делится на текущий зум, чтобы на экране всегда была одинаковой
-    ctx.lineWidth = (width || 3) / paperScale;
+    ctx.lineWidth = width || 3;
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(t.x, t.y); ctx.stroke();
     ctx.restore();
