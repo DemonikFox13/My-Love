@@ -127,6 +127,8 @@
     }, 500);
   }
 
+  function redoEnd() { clearTimeout(redoTimer); }
+
   redoBtn.addEventListener('touchstart', redoStart, { passive: true });
   redoBtn.addEventListener('touchend', redoEnd);
   redoBtn.addEventListener('touchcancel', redoEnd);
