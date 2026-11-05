@@ -336,28 +336,5 @@
   window.LDPaws.init();
   if (window.LDToolbarEditor) window.LDToolbarEditor.init();
 
-  
-  // === РЕЖИМ ОВЕРЛЕЯ ===
-  if (window.location.search.includes('overlay=1')) {
-    document.body.style.backgroundColor = 'transparent';
-    document.body.style.backgroundImage = 'none';
-    
-    // Прячем все интерфейсы
-    ['topbar', 'toolsPanel', 'palette', 'presetsPanel', 'toolbar', 'menuToggleBtn'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
-    document.querySelectorAll('.modal, .text-modal, .emoji-modal').forEach(el => el.style.display = 'none');
-
-    // Делаем холсты прозрачными
-    const board = document.getElementById('board');
-    if (board) board.style.mixBlendMode = 'normal'; // Или другой режим, если нужно
-    const bg = document.getElementById('bgCanvas');
-    if (bg) bg.style.display = 'none';
-
-    // В оверлее мы видим холст роли B (партнера)
-    console.log('✅ Режим оверлея активирован');
-  }
-
   console.log('✅ Live Draw готов');
 })();
