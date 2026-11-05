@@ -51,8 +51,8 @@
               }
               continue;
             }
-            const from = { xPct: s.from.xPct, yPct: s.from.yPct };
-            const to = { xPct: s.to.xPct, yPct: s.to.yPct };
+            const from = { x: s.from.x, y: s.from.y };
+            const to = { x: s.to.x, y: s.to.y };
             if (s.isEraser && s.eraserFilter) {
               window.LDCanvas.eraseFiltered(from, to, s.width || 3, s.eraserFilter);
             } else {
