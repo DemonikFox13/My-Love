@@ -360,5 +360,35 @@
     console.log('✅ Режим оверлея активирован');
   }
 
+  
+  // === РЕЖИМ ОВЕРЛЕЯ (ЖЕСТКИЙ) ===
+  if (window.location.search.includes('overlay=1')) {
+    const style = document.createElement('style');
+    style.id = 'overlay-mode-style';
+    style.innerHTML = `
+      html, body {
+        background: transparent !important;
+        background-color: transparent !important;
+        margin: 0; padding: 0; overflow: hidden;
+      }
+      /* Скрываем ВСЁ, кроме холста */
+      #bgCanvas, #topbar, #toolsPanel, #palette, #presetsPanel, .toolbar, 
+      #menuToggleBtn, #cleanViewExit, .modal, .text-modal, .emoji-modal {
+        display: none !important;
+      }
+      /* Делаем холсты прозрачными */
+      #paper {
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      #board, #shapesCanvas, #textCanvas, #pawsCanvas, #previewCanvas {
+        background: transparent !important;
+      }
+    `;
+    document.head.appendChild(style);
+    console.log('✅ Режим оверлея активирован');
+  }
+
   console.log('✅ Live Draw готов');
 })();
