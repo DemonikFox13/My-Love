@@ -51,9 +51,8 @@
               }
               continue;
             }
-            // Свои штрихи при undo/redo — по локальным координатам (x, y)
-            const from = { x: s.from.x, y: s.from.y };
-            const to = { x: s.to.x, y: s.to.y };
+            const from = { xPct: s.from.xPct, yPct: s.from.yPct };
+            const to = { xPct: s.to.xPct, yPct: s.to.yPct };
             if (s.isEraser && s.eraserFilter) {
               window.LDCanvas.eraseFiltered(from, to, s.width || 3, s.eraserFilter);
             } else {
@@ -119,15 +118,14 @@
         return;
       }
 
-      // Иначе — redo с удалением новых действий
-      const res = window.LDHistory.redo(true);
-      if (res === true) {
-        window.LDEmojis.showToast('Новое действие удалено, откат вперёд', 'success');
+      // Иначе — вернуть ВСЕ из redoStack
+      const redoAll = window.LDHistory.getRedoAll();
+      if (redoAll.length) {
+        redoAll.forEach(function() { window.LDHistory.redo(); });
+        if (window.LDEmojis) window.LDEmojis.showToast('Возвращено ' + redoAll.length + ' действий', 'success');
       }
     }, 500);
   }
-
-  function redoEnd() { clearTimeout(redoTimer); }
 
   redoBtn.addEventListener('touchstart', redoStart, { passive: true });
   redoBtn.addEventListener('touchend', redoEnd);
@@ -138,20 +136,7 @@
 
   redoBtn.addEventListener('click', (e) => {
     if (redoLongPressed) { e.preventDefault(); e.stopPropagation(); return; }
-
-    const all = window.LDHistory.getAll();
-    const last = all[all.length - 1];
-
-    // Если на вершине clear — подсказываем зажать
-    if (last && last.type === 'clear') {
-      if (window.LDEmojis) window.LDEmojis.showToast('Зажмите ↪, чтобы восстановить холст', 'success');
-      return;
-    }
-
-    const res = window.LDHistory.redo(false);
-    if (res === 'blocked') {
-      if (window.LDEmojis) window.LDEmojis.showToast('Зажмите ↪, чтобы удалить новое действие и вернуть старое', 'success');
-    }
+    window.LDHistory.redo();
   });
 
   window.LDSocket.on('draw', applyIncomingStroke);
