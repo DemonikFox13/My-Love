@@ -132,6 +132,14 @@ function initSocket(io) {
       broadcast('shape-delete', data);
     });
 
+    // Синхронизация истории (Undo/Redo)
+    socket.on('sync-canvas', (newStrokes) => {
+      if (myCanvas && Array.isArray(newStrokes)) {
+        myCanvas.strokes = newStrokes;
+        if (partnerRole) socket.to(partnerRole).emit('history', newStrokes);
+      }
+    });
+
     socket.on('clear', () => {
       if (myCanvas) {
         myCanvas.strokes = [];

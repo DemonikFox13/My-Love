@@ -75,6 +75,17 @@
     window.LDTextCanvas.setAllSilent(texts);
   }
 
+
+  function syncHistoryToServer() {
+    if (!window.LDHistory) return;
+    const strokes = [];
+    for (const a of window.LDHistory.getAll()) {
+      if (a.type === 'strokes') for (const s of a.data) strokes.push(s);
+      if (a.type === 'fill') strokes.push({ isFill: true, ...a.data });
+    }
+    try { window.LDSocket.emit('sync-canvas', strokes); } catch(e) {}
+  }
+
   window.LDHistory.setRebuildFn(rebuildAll);
 
   function updateUndoRedoButtons(canUndo, canRedo) {
@@ -90,6 +101,7 @@
 
   document.getElementById('undoBtn').addEventListener('click', () => {
     window.LDHistory.undo();
+    syncHistoryToServer();
   });
 
   const redoBtn = document.getElementById('redoBtn');
@@ -115,6 +127,7 @@
           try { window.LDSocket.emit('draw-batch', strokes); } catch(e) {}
         }
         if (window.LDEmojis) window.LDEmojis.showToast('Холст восстановлен', 'success');
+        syncHistoryToServer();
         return;
       }
 
@@ -139,6 +152,7 @@
   redoBtn.addEventListener('click', (e) => {
     if (redoLongPressed) { e.preventDefault(); e.stopPropagation(); return; }
     window.LDHistory.redo();
+    syncHistoryToServer();
   });
 
   window.LDSocket.on('draw', applyIncomingStroke);
@@ -363,6 +377,12 @@
   
   // === РЕЖИМ ОВЕРЛЕЯ (ЖЕСТКИЙ) ===
   if (window.location.search.includes('overlay=1')) {
+    document.body.classList.add('overlay-mode');
+    document.body.style.background = 'transparent';
+    document.documentElement.style.background = 'transparent';
+    
+    const bg = document.getElementById('bgCanvas');
+    if (bg) bg.style.setProperty('display', 'none', 'important');
     const style = document.createElement('style');
     style.id = 'overlay-mode-style';
     style.innerHTML = `

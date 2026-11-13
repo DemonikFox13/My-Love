@@ -840,3 +840,13 @@ body.clean-view #handOverlay { display: block; pointer-events: auto; }
   -webkit-mask-image: radial-gradient(circle, #000 50%, transparent 50%) !important;
   mask-image: radial-gradient(circle, #000 50%, transparent 50%) !important;
 }
+
+
+/* === РЕЖИМ ОВЕРЛЕЯ === */
+body.overlay-mode, body.overlay-mode html, body.overlay-mode #paper, 
+body.overlay-mode #board, body.overlay-mode #previewCanvas, body.overlay-mode #textCanvas, body.overlay-mode #shapesCanvas {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+body.overlay-mode #bgCanvas { display: none !important; }

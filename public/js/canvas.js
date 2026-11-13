@@ -119,6 +119,12 @@ window.LDCanvas = (() => {
   }
   function rgbToHex(r, g, b) { return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join(''); }
 
+  const IS_OVERLAY = window.location.search.includes('overlay=1');
+  if (IS_OVERLAY) {
+    canvas.style.background = 'transparent';
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Очистка фона
+  }
+
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
     [bgCanvas, canvas, previewCanvas, pawsCanvas].forEach(c => {
@@ -337,8 +343,7 @@ window.LDCanvas = (() => {
     e.preventDefault();
     if (state.textMode || state.shapesMode || state.tool === 'hand') return;
     const p = getPos(e);
-    const t = e.touches ? e.touches[0] : e;
-    state.lastScreenPoint = { xPct: t.clientX / window.innerWidth, yPct: t.clientY / window.innerHeight };
+    state.lastScreenPoint = { xPct: p.x / window.innerWidth, yPct: p.y / window.innerHeight };
     
     if (state.eraserPickCallback) {
       const hex = getPixelHex(p.x, p.y), cb = state.eraserPickCallback;
@@ -363,8 +368,7 @@ window.LDCanvas = (() => {
   function move(e) {
     e.preventDefault(); if (!state.drawing) return;
     const p = getPos(e);
-    const t = e.touches ? e.touches[0] : e;
-    const currentScreenPoint = { xPct: t.clientX / window.innerWidth, yPct: t.clientY / window.innerHeight };
+    const currentScreenPoint = { xPct: p.x / window.innerWidth, yPct: p.y / window.innerHeight };
 
     if (state.tool === 'paw') { if (state.pawLast) placePawsAlong(state.pawLast, p); return; }
     if (state.tool === 'line') { state.lineEnd = p; drawLinePreview(); return; }
@@ -391,8 +395,8 @@ window.LDCanvas = (() => {
     let didDraw = false;
     
     if (state.tool === 'line' && state.lineStart && state.lineEnd) {
-      const t = e.changedTouches ? e.changedTouches[0] : e;
-      const endScreenPoint = { xPct: t.clientX / window.innerWidth, yPct: t.clientY / window.innerHeight };
+      const endPos = getPos(e);
+      const endScreenPoint = { xPct: endPos.x / window.innerWidth, yPct: endPos.y / window.innerHeight };
       const dist = Math.hypot(state.lineEnd.x - state.lineStart.x, state.lineEnd.y - state.lineStart.y);
       
       if (dist > 5) {
