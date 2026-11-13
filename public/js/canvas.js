@@ -148,14 +148,13 @@ window.LDCanvas = (() => {
   }
 
   function getLocalCoords(p) {
-    // Если есть проценты (чужие штрихи или текущее рисование) — переводим
+    // Проценты теперь считаются от размера холста, а не от экрана!
     if (p.xPct !== undefined && p.yPct !== undefined) {
-      let sx = p.xPct * window.innerWidth;
-      let sy = p.yPct * window.innerHeight;
-      if (window.LDPaper) return window.LDPaper.screenToLocal(canvas, sx, sy);
-      return { x: sx, y: sy };
+      return {
+        x: p.xPct * window.innerWidth,
+        y: p.yPct * window.innerHeight
+      };
     }
-    // Если есть только локальные (свои штрихи при rebuild) — отдаём как есть
     return { x: p.x || 0, y: p.y || 0 };
   }
 

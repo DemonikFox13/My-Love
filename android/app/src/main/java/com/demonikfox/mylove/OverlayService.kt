@@ -53,6 +53,7 @@ class OverlayService : Service() {
         val webView = WebView(this).apply {
             setBackgroundColor(0x00000000)
             setLayerType(WebView.LAYER_TYPE_SOFTWARE, null)
+            setBackgroundColor(0x00000000)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
@@ -65,7 +66,7 @@ class OverlayService : Service() {
                 view?.evaluateJavascript("""
                     (function() {
                         const style = document.createElement('style');
-                        style.textContent = 'html, body { background: transparent !important; background-color: transparent !important; } #bgCanvas { display: none !important; } #paper { background: transparent !important; }';
+                        style.textContent = 'html, body, #paper { background: transparent !important; background-color: transparent !important; } #bgCanvas, #topbar, #toolsPanel, .toolbar, #palette { display: none !important; }';
                         document.head.appendChild(style);
                     })();
                 """.trimIndent(), null)
