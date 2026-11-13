@@ -162,6 +162,9 @@
     batch.forEach(applyIncomingStroke);
   });
   window.LDSocket.on('history', (strokes) => {
+    window.LDCanvas.clearSilent();
+    if (window.LDTextCanvas) window.LDTextCanvas.clearAll();
+    if (window.LDShapesCanvas) window.LDShapesCanvas.clearAll();
     strokes.forEach(applyIncomingStroke);
   });
 
@@ -378,6 +381,7 @@
   // === РЕЖИМ ОВЕРЛЕЯ (ЖЕСТКИЙ) ===
   if (window.location.search.includes('overlay=1')) {
     document.body.classList.add('overlay-mode');
+    document.documentElement.classList.add('overlay-mode');
     document.body.style.background = 'transparent';
     document.documentElement.style.background = 'transparent';
     

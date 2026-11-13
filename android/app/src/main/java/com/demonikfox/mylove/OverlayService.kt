@@ -51,8 +51,8 @@ class OverlayService : Service() {
         if (overlayView != null) return
 
         val webView = WebView(this).apply {
-            setBackgroundColor(Color.TRANSPARENT)
-            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+            setBackgroundColor(0x00000000)
+            setLayerType(WebView.LAYER_TYPE_SOFTWARE, null)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE

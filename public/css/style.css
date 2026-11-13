@@ -842,11 +842,16 @@ body.clean-view #handOverlay { display: block; pointer-events: auto; }
 }
 
 
+
+
 /* === РЕЖИМ ОВЕРЛЕЯ === */
-body.overlay-mode, body.overlay-mode html, body.overlay-mode #paper, 
-body.overlay-mode #board, body.overlay-mode #previewCanvas, body.overlay-mode #textCanvas, body.overlay-mode #shapesCanvas {
+html.overlay-mode, body.overlay-mode, 
+body.overlay-mode #paper, body.overlay-mode #board, 
+body.overlay-mode #previewCanvas, body.overlay-mode #textCanvas, 
+body.overlay-mode #shapesCanvas, body.overlay-mode #pawsCanvas {
   background: transparent !important;
   background-color: transparent !important;
   box-shadow: none !important;
+  border: none !important;
 }
 body.overlay-mode #bgCanvas { display: none !important; }
