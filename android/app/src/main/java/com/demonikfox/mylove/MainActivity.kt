@@ -92,7 +92,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=A&v=72")
+        webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+        val t = System.currentTimeMillis()
+        webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=A&t=$t")
     }
 
     private fun injectOverlayBtn() {

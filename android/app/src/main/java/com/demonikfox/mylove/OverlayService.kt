@@ -51,9 +51,8 @@ class OverlayService : Service() {
         if (overlayView != null) return
 
         val webView = WebView(this).apply {
-            setBackgroundColor(0x00000000)
-            setLayerType(WebView.LAYER_TYPE_SOFTWARE, null)
-            setBackgroundColor(0x00000000)
+            setBackgroundColor(Color.TRANSPARENT)
+            setLayerType(WebView.LAYER_TYPE_SOFTWARE, null) // Важно для прозрачности
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
@@ -61,29 +60,25 @@ class OverlayService : Service() {
         }
 
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                view?.evaluateJavascript("document.documentElement.style.background = 'transparent'; document.body.style.background = 'transparent';", null)
+            }
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 view?.evaluateJavascript("""
                     (function() {
-                        document.documentElement.style.background = 'transparent';
-                        document.body.style.background = 'transparent';
-                        document.body.style.backgroundColor = 'transparent';
-                        const p = document.getElementById('paper');
-                        if (p) { p.style.setProperty('background', 'transparent', 'important'); p.style.setProperty('box-shadow', 'none', 'important'); }
-                    })();
-                """.trimIndent(), null)
-
-                view?.evaluateJavascript("""
-                    (function() {
                         const style = document.createElement('style');
-                        style.textContent = 'html, body, #paper { background: transparent !important; background-color: transparent !important; } #bgCanvas, #topbar, #toolsPanel, .toolbar, #palette { display: none !important; }';
+                        style.textContent = 'html, body { background: transparent !important; background-color: transparent !important; } #bgCanvas { display: none !important; } #paper { background: transparent !important; box-shadow: none !important; } #topbar, #toolsPanel, .toolbar, #palette { display: none !important; }';
                         document.head.appendChild(style);
                     })();
                 """.trimIndent(), null)
             }
         }
 
-        webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=B&overlay=1&v=1")
+        // Уникальная метка времени отключает кэш!
+        val t = System.currentTimeMillis()
+        webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=B&overlay=1&t=$t")
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -106,23 +101,14 @@ class OverlayService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID, "Live Draw Overlay",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
+            val channel = NotificationChannel(CHANNEL_ID, "Live Draw Overlay", NotificationManager.IMPORTANCE_LOW)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
 
     private fun createNotification(): Notification {
-        val stopIntent = Intent(this, OverlayService::class.java).apply {
-            action = "STOP_OVERLAY"
-        }
-        val stopPendingIntent = PendingIntent.getService(
-            this, 0, stopIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        val stopIntent = Intent(this, OverlayService::class.java).apply { action = "STOP_OVERLAY" }
+        val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Live Draw включен")
