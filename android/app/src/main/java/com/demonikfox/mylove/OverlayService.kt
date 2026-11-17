@@ -65,6 +65,16 @@ class OverlayService : Service() {
                 super.onPageFinished(view, url)
                 view?.evaluateJavascript("""
                     (function() {
+                        document.documentElement.style.background = 'transparent';
+                        document.body.style.background = 'transparent';
+                        document.body.style.backgroundColor = 'transparent';
+                        const p = document.getElementById('paper');
+                        if (p) { p.style.setProperty('background', 'transparent', 'important'); p.style.setProperty('box-shadow', 'none', 'important'); }
+                    })();
+                """.trimIndent(), null)
+
+                view?.evaluateJavascript("""
+                    (function() {
                         const style = document.createElement('style');
                         style.textContent = 'html, body, #paper { background: transparent !important; background-color: transparent !important; } #bgCanvas, #topbar, #toolsPanel, .toolbar, #palette { display: none !important; }';
                         document.head.appendChild(style);

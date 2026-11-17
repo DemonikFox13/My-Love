@@ -163,9 +163,12 @@
   });
   window.LDSocket.on('history', (strokes) => {
     window.LDCanvas.clearSilent();
+    window.LDCanvas.clearPaws();
     if (window.LDTextCanvas) window.LDTextCanvas.clearAll();
     if (window.LDShapesCanvas) window.LDShapesCanvas.clearAll();
-    strokes.forEach(applyIncomingStroke);
+    if (Array.isArray(strokes)) {
+      strokes.forEach(applyIncomingStroke);
+    }
   });
 
   window.LDSocket.on('fill', ({ xPct, yPct, color }) => {
@@ -387,6 +390,8 @@
     
     const bg = document.getElementById('bgCanvas');
     if (bg) bg.style.setProperty('display', 'none', 'important');
+    const paper = document.getElementById('paper');
+    if (paper) paper.style.setProperty('background', 'transparent', 'important');
     const style = document.createElement('style');
     style.id = 'overlay-mode-style';
     style.innerHTML = `
