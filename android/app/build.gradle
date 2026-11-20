@@ -11,8 +11,8 @@ android {
         applicationId "com.demonikfox.mylove"
         minSdk 26
         targetSdk 34
-        versionCode 60
-        versionName "6.0 DIAG"
+        versionCode 70
+        versionName "7.0 DIAG"
     }
 
     buildTypes {

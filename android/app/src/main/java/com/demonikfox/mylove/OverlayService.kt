@@ -43,10 +43,9 @@ class OverlayService : Service() {
         if (overlayView != null) return
 
         val webView = WebView(this).apply {
-            // АППАРАТНЫЙ ФИКС ПРОЗРАЧНОСТИ
-            setBackgroundColor(Color.parseColor("#00000000"))
-            setAlpha(0.99f) // Заставляет телефон применять прозрачность поверх других окон
-            setLayerType(WebView.LAYER_TYPE_SOFTWARE, null)
+            // ЖЕСТКИЙ ФИКС: Аппаратное ускорение + полная прозрачность
+            setBackgroundColor(Color.TRANSPARENT)
+            setLayerType(View.LAYER_TYPE_HARDWARE, null) 
             
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
@@ -55,29 +54,36 @@ class OverlayService : Service() {
         }
 
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                // Внедряем прозрачность ДО того, как страница начнет рисоваться
+                view?.evaluateJavascript("document.documentElement.style.background = 'transparent'; document.body.style.background = 'transparent';", null)
+            }
+            
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                // Внедряем CSS прозрачности и ДИАГНОСТИЧЕСКИЙ СЧЕТЧИК
                 view?.evaluateJavascript("""
                     (function() {
                         const style = document.createElement('style');
-                        style.textContent = 'html, body { background: transparent !important; background-color: transparent !important; } #bgCanvas, #topbar, #toolsPanel, .toolbar, #palette { display: none !important; } #paper { background: transparent !important; box-shadow: none !important; }';
+                        // Убиваем ВСЕ фоны на сайте
+                        style.textContent = 'html, body, #paper, #board, canvas { background: transparent !important; background-color: transparent !important; box-shadow: none !important; } #bgCanvas, #topbar, #toolsPanel, .toolbar, #palette { display: none !important; }';
                         document.head.appendChild(style);
                         
-                        // ДИАГНОСТИКА: Красный счетчик в левом верхнем углу
+                        // ДИАГНОСТИКА (опускаем ниже, чтобы не мешал камере)
                         let debugDiv = document.getElementById('debug-strokes');
                         if (!debugDiv) {
                             debugDiv = document.createElement('div');
                             debugDiv.id = 'debug-strokes';
-                            debugDiv.style.cssText = 'position:fixed; top:10px; left:10px; background:rgba(255,0,0,0.8); color:white; padding:5px; font-size:16px; z-index:999999; border-radius:5px;';
+                            debugDiv.style.cssText = 'position:fixed; top:120px; left:20px; background:rgba(255,0,0,0.9); color:white; padding:8px; font-size:18px; z-index:999999; border-radius:8px; font-weight:bold;';
                             document.body.appendChild(debugDiv);
                         }
                         
-                        // Обновляем счетчик каждую секунду
                         setInterval(() => {
                             if (window.LDHistory) {
                                 let count = window.LDHistory.getAll().length;
-                                debugDiv.innerText = 'Слои истории: ' + count;
+                                debugDiv.innerText = 'Слои: ' + count;
+                            } else {
+                                debugDiv.innerText = 'История не загружена';
                             }
                         }, 1000);
                     })();
@@ -101,6 +107,7 @@ class OverlayService : Service() {
         windowManager.addView(overlayView, params)
     }
 
+    // ... (остальной код без изменений)
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(CHANNEL_ID, "Live Draw Overlay", NotificationManager.IMPORTANCE_LOW)
