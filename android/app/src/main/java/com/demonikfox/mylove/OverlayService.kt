@@ -19,11 +19,7 @@ import android.webkit.WebViewClient
 import androidx.core.app.NotificationCompat
 
 class OverlayService : Service() {
-
-    companion object {
-        var isRunning = false
-    }
-
+    companion object { var isRunning = false }
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
     private val CHANNEL_ID = "OverlayChannel"
@@ -36,11 +32,7 @@ class OverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == "STOP_OVERLAY") {
-            stopSelf()
-            return START_NOT_STICKY
-        }
-
+        if (intent?.action == "STOP_OVERLAY") { stopSelf(); return START_NOT_STICKY }
         isRunning = true
         startForeground(NOTIF_ID, createNotification())
         showOverlay()
@@ -51,8 +43,11 @@ class OverlayService : Service() {
         if (overlayView != null) return
 
         val webView = WebView(this).apply {
-            setBackgroundColor(Color.TRANSPARENT)
-            setLayerType(WebView.LAYER_TYPE_SOFTWARE, null) // Важно для прозрачности
+            // АППАРАТНЫЙ ФИКС ПРОЗРАЧНОСТИ
+            setBackgroundColor(Color.parseColor("#00000000"))
+            setAlpha(0.99f) // Заставляет телефон применять прозрачность поверх других окон
+            setLayerType(WebView.LAYER_TYPE_SOFTWARE, null)
+            
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
@@ -60,37 +55,44 @@ class OverlayService : Service() {
         }
 
         webView.webViewClient = object : WebViewClient() {
-            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                view?.evaluateJavascript("document.documentElement.style.background = 'transparent'; document.body.style.background = 'transparent';", null)
-            }
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                // Внедряем CSS прозрачности и ДИАГНОСТИЧЕСКИЙ СЧЕТЧИК
                 view?.evaluateJavascript("""
                     (function() {
                         const style = document.createElement('style');
-                        style.textContent = 'html, body { background: transparent !important; background-color: transparent !important; } #bgCanvas { display: none !important; } #paper { background: transparent !important; box-shadow: none !important; } #topbar, #toolsPanel, .toolbar, #palette { display: none !important; }';
+                        style.textContent = 'html, body { background: transparent !important; background-color: transparent !important; } #bgCanvas, #topbar, #toolsPanel, .toolbar, #palette { display: none !important; } #paper { background: transparent !important; box-shadow: none !important; }';
                         document.head.appendChild(style);
+                        
+                        // ДИАГНОСТИКА: Красный счетчик в левом верхнем углу
+                        let debugDiv = document.getElementById('debug-strokes');
+                        if (!debugDiv) {
+                            debugDiv = document.createElement('div');
+                            debugDiv.id = 'debug-strokes';
+                            debugDiv.style.cssText = 'position:fixed; top:10px; left:10px; background:rgba(255,0,0,0.8); color:white; padding:5px; font-size:16px; z-index:999999; border-radius:5px;';
+                            document.body.appendChild(debugDiv);
+                        }
+                        
+                        // Обновляем счетчик каждую секунду
+                        setInterval(() => {
+                            if (window.LDHistory) {
+                                let count = window.LDHistory.getAll().length;
+                                debugDiv.innerText = 'Слои истории: ' + count;
+                            }
+                        }, 1000);
                     })();
                 """.trimIndent(), null)
             }
         }
 
-        // Уникальная метка времени отключает кэш!
         val t = System.currentTimeMillis()
         webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=B&overlay=1&t=$t")
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                WindowManager.LayoutParams.TYPE_PHONE
-            },
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         )
         params.gravity = Gravity.TOP or Gravity.START
@@ -109,14 +111,10 @@ class OverlayService : Service() {
     private fun createNotification(): Notification {
         val stopIntent = Intent(this, OverlayService::class.java).apply { action = "STOP_OVERLAY" }
         val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Live Draw включен")
-            .setContentText("Рисунок партнера на экране")
-            .setSmallIcon(android.R.drawable.ic_menu_edit)
-            .setOngoing(true)
-            .addAction(android.R.drawable.ic_delete, "Выключить", stopPendingIntent)
-            .build()
+            .setContentTitle("Live Draw включен").setContentText("Рисунок партнера на экране")
+            .setSmallIcon(android.R.drawable.ic_menu_edit).setOngoing(true)
+            .addAction(android.R.drawable.ic_delete, "Выключить", stopPendingIntent).build()
     }
 
     override fun onDestroy() {
