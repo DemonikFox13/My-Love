@@ -202,7 +202,7 @@
     window.LDTextCanvas.clearAll();
     window.LDShapesCanvas.clearAll();
     window.LDCanvas.clearPaws();
-    if (window.LDHistory) window.LDHistory.add({ type: 'clear', data: {} });
+    // НЕ добавляем в историю, так как это сделал партнер
   });
 
   window.LDSocket.on('hearts', (payload) => {

@@ -136,7 +136,7 @@ function initSocket(io) {
     socket.on('sync-canvas', (newStrokes) => {
       if (myCanvas && Array.isArray(newStrokes)) {
         myCanvas.strokes = newStrokes;
-        if (partnerRole) socket.to(partnerRole).emit('history', newStrokes);
+        socket.broadcast.emit('history', newStrokes);
       }
     });
 

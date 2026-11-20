@@ -44,8 +44,9 @@ class OverlayService : Service() {
 
         val webView = WebView(this).apply {
             // ЖЕСТКИЙ ФИКС: Аппаратное ускорение + полная прозрачность
-            setBackgroundColor(Color.TRANSPARENT)
-            setLayerType(View.LAYER_TYPE_HARDWARE, null) 
+            setBackgroundColor(0)
+            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            setBackgroundColor(0) 
             
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
