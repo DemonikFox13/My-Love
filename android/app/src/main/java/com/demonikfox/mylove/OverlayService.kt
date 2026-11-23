@@ -1,5 +1,6 @@
 package com.demonikfox.mylove
 
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -16,6 +17,7 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -28,12 +30,14 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.app.NotificationCompat
+import java.io.File
+import java.io.FileOutputStream
 import java.io.OutputStream
 
 class OverlayService : Service() {
     companion object {
         var isRunning = false
-        private const val AUTO_HIDE_SECONDS = 2 * 60 * 60 // 2 часа
+        private const val AUTO_HIDE_SECONDS = 2 * 60 * 60
         private const val TICK_INTERVAL_MS = 10_000L
     }
     private lateinit var windowManager: WindowManager
@@ -43,7 +47,7 @@ class OverlayService : Service() {
     private val NOTIF_ID = 101
 
     private var visibleSeconds = 0L
-    private var isUnlocked = false
+    private var isUnlocked = true
     private var hasContent = false
     private var isTimerRunning = false
 
@@ -81,6 +85,11 @@ class OverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        
+        // Проверяем, разблокирован ли телефон прямо сейчас
+        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        isUnlocked = !keyguardManager.isKeyguardLocked
+
         createNotificationChannel()
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_USER_PRESENT)
@@ -111,19 +120,32 @@ class OverlayService : Service() {
             val imageBytes = Base64.decode(base64Str, Base64.DEFAULT)
             val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
             val filename = "LiveDraw_${System.currentTimeMillis()}.png"
-            var uri: Uri? = null
-            val values = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, filename)
-                put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/LiveDraw")
+            val folderName = "My Love"
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Android 10+
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$folderName")
                 }
-            }
-            uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            uri?.let {
-                val outputStream: OutputStream? = contentResolver.openOutputStream(it)
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream!!)
+                val uri: Uri? = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                uri?.let {
+                    val outputStream: OutputStream? = contentResolver.openOutputStream(it)
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream!!)
+                    outputStream.close()
+                }
+            } else {
+                // Android 9 и ниже
+                val imagesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), folderName)
+                if (!imagesDir.exists()) imagesDir.mkdirs()
+                val imageFile = File(imagesDir, filename)
+                val outputStream = FileOutputStream(imageFile)
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                outputStream.flush()
                 outputStream.close()
+                // Обновляем галерею
+                sendBroadcast(Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(imageFile)))
             }
             mainHandler.post { hideAndClear() }
         } catch (e: Exception) { e.printStackTrace() }
