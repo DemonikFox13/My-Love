@@ -8,6 +8,9 @@
 
   function applyIncomingStroke(s) {
     if (!s) return;
+    if (window.AndroidOverlay && window.AndroidOverlay.onPartnerDraw) {
+        try { window.AndroidOverlay.onPartnerDraw(); } catch(e) {}
+    }
     if (s.isPaw) {
       if (s.mode === 'fade') {
         s.addedAt = Date.now();

@@ -64,6 +64,7 @@ function initSocket(io) {
       if (myCanvas) pushStroke(myCanvas, data);
       broadcast('draw', data);
       broadcastPartnerActive('draw');
+      socket.broadcast.emit('partner_drawing_start');
     });
 
     socket.on('draw-batch', (batch) => {
@@ -77,6 +78,7 @@ function initSocket(io) {
       }
       broadcast('draw-batch', valid);
       broadcastPartnerActive('draw');
+      socket.broadcast.emit('partner_drawing_start');
     });
 
     socket.on('paw', (data) => {
@@ -84,12 +86,14 @@ function initSocket(io) {
       if (myCanvas && data.mode === 'permanent') pushStroke(myCanvas, data);
       broadcast('paw', data);
       broadcastPartnerActive('draw');
+      socket.broadcast.emit('partner_drawing_start');
     });
 
     socket.on('fill', (data) => {
       if (!data || typeof data.xPct !== 'number' || !data.color) return;
       broadcast('fill', data);
       broadcastPartnerActive('draw');
+      socket.broadcast.emit('partner_drawing_start');
     });
 
     socket.on('text-create', (data) => {
@@ -97,6 +101,7 @@ function initSocket(io) {
       if (myCanvas) myCanvas.texts.push(data);
       broadcast('text-create', data);
       broadcastPartnerActive('draw');
+      socket.broadcast.emit('partner_drawing_start');
     });
     socket.on('text-update', (data) => {
       if (!data || !data.id) return;
@@ -117,6 +122,7 @@ function initSocket(io) {
       if (myCanvas) myCanvas.shapes.push(data);
       broadcast('shape-create', data);
       broadcastPartnerActive('draw');
+      socket.broadcast.emit('partner_drawing_start');
     });
     socket.on('shape-update', (data) => {
       if (!data || !data.id) return;

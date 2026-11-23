@@ -177,11 +177,16 @@ class OverlayService : Service() {
                 @JavascriptInterface
                 fun onPartnerDraw() {
                     mainHandler.post {
+                        val wasHidden = !hasContent || (overlayView?.alpha ?: 0f) < 1f
                         hasContent = true
-                        visibleSeconds = 0L
+                        visibleSeconds = 0L // Сбрасываем таймер при новом штрихе
+                        
                         if (isUnlocked) {
                             isTimerRunning = true
-                            overlayView?.animate()?.alpha(1f)?.setDuration(300)?.start()
+                            // Запускаем анимацию ТОЛЬКО если оверлей был скрыт, чтобы не было дёрганья
+                            if (wasHidden) {
+                                overlayView?.animate()?.alpha(1f)?.setDuration(300)?.start()
+                            }
                         } else {
                             isTimerRunning = false
                         }
@@ -201,7 +206,7 @@ class OverlayService : Service() {
                         style.textContent = `
                             html, body { background: transparent !important; background-color: transparent !important; }
                             body * { visibility: hidden; background: transparent !important; background-color: transparent !important; box-shadow: none !important; }
-                            #paper, #board, #shapesCanvas, #textCanvas, #pawsCanvas, #previewCanvas { visibility: visible !important; background: transparent !important; box-shadow: none !important; }
+                            #paper, #board, #shapesCanvas, #textCanvas, #pawsCanvas, #previewCanvas { visibility: visible !important; display: block !important; opacity: 1 !important; background: transparent !important; background-color: transparent !important; box-shadow: none !important; z-index: 9999 !important; }
                             #paper { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; transform: none !important; }
                             #bgCanvas { display: none !important; }
                         `;
