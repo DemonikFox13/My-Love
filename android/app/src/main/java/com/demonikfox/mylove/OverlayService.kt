@@ -33,7 +33,7 @@ import java.io.OutputStream
 class OverlayService : Service() {
     companion object {
         var isRunning = false
-        private const val AUTO_HIDE_SECONDS = 2 * 60 * 60
+        private const val AUTO_HIDE_SECONDS = 2 * 60 * 60 // 2 часа
         private const val TICK_INTERVAL_MS = 10_000L
     }
     private lateinit var windowManager: WindowManager
@@ -45,12 +45,12 @@ class OverlayService : Service() {
     private var visibleSeconds = 0L
     private var isUnlocked = false
     private var hasContent = false
+    private var isTimerRunning = false
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val tickRunnable = object : Runnable {
         override fun run() {
-            // Таймер идет только если телефон разблокирован и есть контент
-            if (isUnlocked && hasContent) {
+            if (isTimerRunning && hasContent) {
                 visibleSeconds += TICK_INTERVAL_MS / 1000
                 if (visibleSeconds >= AUTO_HIDE_SECONDS) {
                     hideAndClear()
@@ -65,7 +65,10 @@ class OverlayService : Service() {
             when (intent?.action) {
                 Intent.ACTION_USER_PRESENT -> {
                     isUnlocked = true
-                    if (hasContent) overlayView?.animate()?.alpha(1f)?.setDuration(300)?.start()
+                    if (hasContent) {
+                        overlayView?.animate()?.alpha(1f)?.setDuration(300)?.start()
+                        isTimerRunning = true
+                    }
                 }
                 Intent.ACTION_SCREEN_OFF -> {
                     isUnlocked = false
@@ -107,7 +110,6 @@ class OverlayService : Service() {
             val base64Str = dataUrl.substring(dataUrl.indexOf(",") + 1)
             val imageBytes = Base64.decode(base64Str, Base64.DEFAULT)
             val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-            
             val filename = "LiveDraw_${System.currentTimeMillis()}.png"
             var uri: Uri? = null
             val values = ContentValues().apply {
@@ -117,18 +119,14 @@ class OverlayService : Service() {
                     put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/LiveDraw")
                 }
             }
-            
             uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
             uri?.let {
                 val outputStream: OutputStream? = contentResolver.openOutputStream(it)
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream!!)
                 outputStream.close()
             }
-            
             mainHandler.post { hideAndClear() }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     private fun hideAndClear() {
@@ -137,6 +135,7 @@ class OverlayService : Service() {
             overlayView?.animate()?.alpha(0f)?.setDuration(500)?.start()
         }
         hasContent = false
+        isTimerRunning = false
         visibleSeconds = 0L
     }
 
@@ -156,18 +155,18 @@ class OverlayService : Service() {
                 @JavascriptInterface
                 fun onPartnerDraw() {
                     mainHandler.post {
-                        if (!hasContent) {
-                            hasContent = true
-                            visibleSeconds = 0L
-                            // Показываем только если телефон разблокирован
-                            if (isUnlocked) overlayView?.animate()?.alpha(1f)?.setDuration(300)?.start()
+                        hasContent = true
+                        visibleSeconds = 0L
+                        if (isUnlocked) {
+                            isTimerRunning = true
+                            overlayView?.animate()?.alpha(1f)?.setDuration(300)?.start()
+                        } else {
+                            isTimerRunning = false
                         }
                     }
                 }
                 @JavascriptInterface
-                fun saveImage(dataUrl: String) {
-                    this@OverlayService.saveImage(dataUrl)
-                }
+                fun saveImage(dataUrl: String) { this@OverlayService.saveImage(dataUrl) }
             }, "AndroidOverlay")
         }
 
@@ -212,7 +211,6 @@ class OverlayService : Service() {
     private fun createNotification(): Notification {
         val stopIntent = Intent(this, OverlayService::class.java).apply { action = "STOP_OVERLAY" }
         val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        
         val saveIntent = Intent(this, OverlayService::class.java).apply { action = "SAVE_AND_HIDE" }
         val savePendingIntent = PendingIntent.getService(this, 0, saveIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
