@@ -326,7 +326,7 @@ window.LDCanvas = (() => {
       travelled += stepDist;
       const px = from.x + nx * travelled, py = from.y + ny * travelled;
       const sideMul = state.pawSide === 'L' ? -1 : 1;
-      const paw = { isPaw: true, mode, timer: timerSec, x: px + perpX * gap * sideMul, y: py + perpY * gap * sideMul, angle, side: state.pawSide, pawType: state.paw.type, size, color: state.color, addedAt: Date.now() };
+      const paw = { isPaw: true, mode, timer: timerSec, x: px + perpX * gap * sideMul, y: py + perpY * gap * sideMul, angle, side: state.pawSide, pawType: state.paw.type, size, color: state.color, addedAt: Date.now(), _p: !sendingToPartner };
       
       if (mode === 'fade') addPaw(paw);
       else if (mode === 'timer') addPawTimer(paw, timerSec);
@@ -355,7 +355,7 @@ window.LDCanvas = (() => {
     if (state.tool === 'eyedropper') { pickColor(p.x, p.y); return; }
     if (state.tool === 'fill') {
       floodFill(p.x, p.y, state.color); emitFill(p.x, p.y, state.color);
-      if (window.LDHistory) window.LDHistory.add({ type: 'fill', data: { xPct: state.lastScreenPoint.xPct, yPct: state.lastScreenPoint.yPct, color: state.color } });
+      if (window.LDHistory) window.LDHistory.add({ type: 'fill', data: { xPct: state.lastScreenPoint.xPct, yPct: state.lastScreenPoint.yPct, color: state.color, _p: !sendingToPartner } });
       commitPreset(); return;
     }
     if (state.tool === 'line') {
@@ -376,14 +376,14 @@ window.LDCanvas = (() => {
     const segTo = { x: p.x, y: p.y, xPct: currentScreenPoint.xPct, yPct: currentScreenPoint.yPct };
 
     if (state.tool === 'eraser') {
-      const seg = { from: segFrom, to: segTo, color: '#000', width: state.lineWidth, isEraser: true, eraserFilter: { mode: state.eraserFilter.mode, colors: state.eraserFilter.colors.slice() } };
+      const seg = { from: segFrom, to: segTo, color: '#000', width: state.lineWidth, isEraser: true, eraserFilter: { mode: state.eraserFilter.mode, colors: state.eraserFilter.colors.slice() }, _p: !sendingToPartner };
       eraseFiltered(segFrom, segTo, state.lineWidth, state.eraserFilter);
       erasePawsAlong(state.lastPoint, p, state.lineWidth / 2 + 8);
       if (sendingToPartner) window.LDSocket.emit('draw', seg); else buffer.push(seg);
       historyBuffer.push(seg); state.lastPoint = p; state.lastScreenPoint = currentScreenPoint; return;
     }
     
-    const segment = { from: segFrom, to: segTo, color: state.color, width: state.lineWidth, isEraser: false };
+    const segment = { from: segFrom, to: segTo, color: state.color, width: state.lineWidth, isEraser: false, _p: !sendingToPartner };
     drawSegment(segFrom, segTo, state.color, state.lineWidth, false);
     if (sendingToPartner) window.LDSocket.emit('draw', segment); else buffer.push(segment);
     historyBuffer.push(segment); state.lastPoint = p; state.lastScreenPoint = currentScreenPoint;

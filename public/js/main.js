@@ -81,12 +81,43 @@
 
   function syncHistoryToServer() {
     if (!window.LDHistory) return;
-    const strokes = [];
+    let strokes = [];
+    let shapes = [];
+    let texts = [];
+    
+    // Проходим по всей истории по порядку
     for (const a of window.LDHistory.getAll()) {
-      if (a.type === 'strokes') for (const s of a.data) strokes.push(s);
-      if (a.type === 'fill') strokes.push({ isFill: true, ...a.data });
+      if (a.type === 'clear') {
+        // Если была очистка — обнуляем всё, что было до неё!
+        strokes = [];
+        shapes = [];
+        texts = [];
+      } else if (a.type === 'strokes') {
+        for (const s of a.data) {
+          if (!s._p) strokes.push(s); // Пропускаем приватные штрихи
+        }
+      } else if (a.type === 'fill') {
+        if (!a.data._p) strokes.push({ isFill: true, ...a.data }); // Пропускаем приватную заливку
+      } else if (a.type === 'shape-add') {
+        shapes.push(JSON.parse(JSON.stringify(a.data.shape)));
+      } else if (a.type === 'shape-update') {
+        const s = shapes.find(x => x.id === a.data.id);
+        if (s) Object.assign(s, a.data.changes);
+      } else if (a.type === 'shape-delete') {
+        const i = shapes.findIndex(x => x.id === a.data.id);
+        if (i >= 0) shapes.splice(i, 1);
+      } else if (a.type === 'text-add') {
+        texts.push(JSON.parse(JSON.stringify(a.data.text)));
+      } else if (a.type === 'text-update') {
+        const t = texts.find(x => x.id === a.data.id);
+        if (t) Object.assign(t, a.data.changes);
+      } else if (a.type === 'text-delete') {
+        const i = texts.findIndex(x => x.id === a.data.id);
+        if (i >= 0) texts.splice(i, 1);
+      }
     }
-    try { window.LDSocket.emit('sync-canvas', strokes); } catch(e) {}
+    
+    try { window.LDSocket.emit('sync-canvas', { strokes, shapes, texts }); } catch(e) {}
   }
 
   window.LDHistory.setRebuildFn(rebuildAll);

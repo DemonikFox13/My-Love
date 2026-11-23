@@ -139,10 +139,15 @@ function initSocket(io) {
     });
 
     // Синхронизация истории (Undo/Redo)
-    socket.on('sync-canvas', (newStrokes) => {
-      if (myCanvas && Array.isArray(newStrokes)) {
-        myCanvas.strokes = newStrokes;
-        socket.broadcast.emit('history', newStrokes);
+    socket.on('sync-canvas', (data) => {
+      if (myCanvas && data) {
+        if (Array.isArray(data.strokes)) myCanvas.strokes = data.strokes;
+        if (Array.isArray(data.shapes)) myCanvas.shapes = data.shapes;
+        if (Array.isArray(data.texts)) myCanvas.texts = data.texts;
+        
+        socket.broadcast.emit('history', myCanvas.strokes);
+        socket.broadcast.emit('shapes-history', myCanvas.shapes);
+        socket.broadcast.emit('texts-history', myCanvas.texts);
       }
     });
 
