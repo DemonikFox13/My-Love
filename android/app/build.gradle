@@ -11,8 +11,8 @@ android {
         applicationId "com.demonikfox.mylove"
         minSdk 26
         targetSdk 34
-        versionCode 91
-        versionName "9.1 SMART"
+        versionCode 100
+        versionName "10.0 GALLERY"
     }
 
     buildTypes {

@@ -438,5 +438,29 @@
     });
   }
 
+  
+  // === СОХРАНЕНИЕ РИСУНКА В ГАЛЕРЕЮ ===
+  window.captureAndSave = function() {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = window.innerWidth;
+    tempCanvas.height = window.innerHeight;
+    const tCtx = tempCanvas.getContext('2d');
+    
+    // Заливаем белым фоном (чтобы в галерее было видно на белом)
+    tCtx.fillStyle = '#ffffff';
+    tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    
+    // Копируем все слои
+    ['board', 'shapesCanvas', 'textCanvas', 'pawsCanvas'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) tCtx.drawImage(el, 0, 0, tempCanvas.width, tempCanvas.height);
+    });
+    
+    const dataUrl = tempCanvas.toDataURL('image/png');
+    if (window.AndroidOverlay && window.AndroidOverlay.saveImage) {
+      window.AndroidOverlay.saveImage(dataUrl);
+    }
+  };
+
   console.log('✅ Live Draw готов');
 })();
