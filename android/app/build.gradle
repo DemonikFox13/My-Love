@@ -11,8 +11,8 @@ android {
         applicationId "com.demonikfox.mylove"
         minSdk 26
         targetSdk 34
-        versionCode 71
-        versionName "7.1 FINAL"
+        versionCode 90
+        versionName "9.0 OVERLAY"
     }
 
     buildTypes {
