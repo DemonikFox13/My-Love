@@ -14,6 +14,7 @@ import android.os.IBinder
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.app.NotificationCompat
@@ -22,6 +23,7 @@ class OverlayService : Service() {
     companion object { var isRunning = false }
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
+    private var webView: WebView? = null
     private val CHANNEL_ID = "OverlayChannel"
     private val NOTIF_ID = 101
 
@@ -41,7 +43,8 @@ class OverlayService : Service() {
 
     private fun showOverlay() {
         if (overlayView != null) return
-        val webView = WebView(this).apply {
+        
+        webView = WebView(this).apply {
             setBackgroundColor(Color.TRANSPARENT)
             setLayerType(View.LAYER_TYPE_HARDWARE, null)
             settings.javaScriptEnabled = true
@@ -49,12 +52,29 @@ class OverlayService : Service() {
             settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
             settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             clearCache(true)
+            // Изначально прячем оверлей (прозрачность 0)
+            alpha = 0f 
+
+            // МОСТ: Сайт будет управлять видимостью оверлея
+            addJavascriptInterface(object {
+                @JavascriptInterface
+                fun setDrawingActive(active: Boolean) {
+                    runOnUiThread {
+                        overlayView?.animate()?.alpha(if (active) 1f else 0f)?.setDuration(300)?.start()
+                    }
+                }
+                @JavascriptInterface
+                fun clearOverlay() {
+                    runOnUiThread {
+                        webView?.evaluateJavascript("if (window.LDCanvas) window.LDCanvas.clearSilent();", null)
+                    }
+                }
+            }, "OverlayBridge")
         }
 
-        webView.webViewClient = object : WebViewClient() {
+        webView?.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                // ЖЕСТКИЙ CSS: Прячем всё, показываем только холсты
                 view?.evaluateJavascript("""
                     (function() {
                         const style = document.createElement('style');
@@ -75,7 +95,7 @@ class OverlayService : Service() {
             }
         }
         val t = System.currentTimeMillis()
-        webView.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=B&overlay=1&t=$t")
+        webView?.loadUrl("https://bot-1792486643-5744-demonikfox.bothost.tech/?role=B&overlay=1&t=$t")
         
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
@@ -83,7 +103,7 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or 
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or 
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, // Позволяет рисовать за пределами экрана
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         )
         params.gravity = Gravity.TOP or Gravity.START
@@ -104,6 +124,18 @@ class OverlayService : Service() {
             .setContentTitle("Live Draw включен").setContentText("Рисунок партнера на экране").setSmallIcon(android.R.drawable.ic_menu_edit).setOngoing(true)
             .addAction(android.R.drawable.ic_delete, "Выключить", stopPendingIntent).build()
     }
-    override fun onDestroy() { super.onDestroy(); isRunning = false; if (overlayView != null) { try { windowManager.removeView(overlayView) } catch (e: Exception) {}; overlayView = null } }
+    override fun onDestroy() { 
+        super.onDestroy()
+        isRunning = false
+        if (overlayView != null) { 
+            try { 
+                // Очищаем холст при выключении
+                webView?.evaluateJavascript("if (window.LDCanvas) window.LDCanvas.clearSilent();", null)
+                windowManager.removeView(overlayView) 
+            } catch (e: Exception) {} 
+            overlayView = null 
+            webView = null
+        } 
+    }
     override fun onBind(intent: Intent?): IBinder? = null
 }

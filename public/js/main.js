@@ -419,5 +419,24 @@
     console.log('✅ Режим оверлея активирован');
   }
 
+  
+  // === УМНЫЙ ОВЕРЛЕЙ ===
+  if (window.location.search.includes('overlay=1')) {
+    let hideTimer = null;
+
+    window.LDSocket.on('partner_drawing_start', () => {
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      if (window.OverlayBridge) window.OverlayBridge.setDrawingActive(true);
+    });
+
+    window.LDSocket.on('partner_drawing_stop', () => {
+      if (hideTimer) clearTimeout(hideTimer);
+      // Прячем оверлей через 3 секунды после окончания рисования
+      hideTimer = setTimeout(() => {
+        if (window.OverlayBridge) window.OverlayBridge.setDrawingActive(false);
+      }, 3000);
+    });
+  }
+
   console.log('✅ Live Draw готов');
 })();
