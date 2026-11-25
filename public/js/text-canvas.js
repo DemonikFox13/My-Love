@@ -8,6 +8,12 @@ window.LDTextCanvas = (() => {
   let gesture = null;
   let pendingTap = null;
   let sendingEnabled = true;
+
+  function addHistory(action) {
+    if (!window.LDHistory) return;
+    if (!sendingEnabled) action._p = true;
+    window.LDHistory.add(action);
+  }
   const guides = { v: [], h: [] };
 
   const toolbar = document.getElementById('textToolbar');
@@ -260,7 +266,7 @@ window.LDTextCanvas = (() => {
       if (target) {
         const changes = { x: target.x, y: target.y };
         if (sendingEnabled) window.LDSocket.emit('text-update', { id: target.id, changes });
-        if (window.LDHistory) window.LDHistory.add({ type: 'text-update', data: { id: target.id, changes } });
+        if (window.LDHistory) addHistory({ type: 'text-update', data: { id: target.id, changes } });
       }
       guides.v = []; guides.h = [];
       render();
@@ -270,7 +276,7 @@ window.LDTextCanvas = (() => {
       if (target) {
         const changes = { size: target.size, rotation: target.rotation };
         if (sendingEnabled) window.LDSocket.emit('text-update', { id: target.id, changes });
-        if (window.LDHistory) window.LDHistory.add({ type: 'text-update', data: { id: target.id, changes } });
+        if (window.LDHistory) addHistory({ type: 'text-update', data: { id: target.id, changes } });
       }
       gesture = null;
     }
@@ -301,7 +307,7 @@ window.LDTextCanvas = (() => {
     } else {
       render();
     }
-    if (window.LDHistory) window.LDHistory.add({ type: 'text-add', data: { text: JSON.parse(JSON.stringify(t)) } });
+    if (!silent && window.LDHistory) addHistory({ type: 'text-add', data: { text: JSON.parse(JSON.stringify(t)) } });
     return t;
   }
   function update(id, changes, silent) {
@@ -310,14 +316,14 @@ window.LDTextCanvas = (() => {
     Object.assign(t, changes);
     render();
     if (!silent && sendingEnabled) window.LDSocket.emit('text-update', { id, changes });
-    if (window.LDHistory) window.LDHistory.add({ type: 'text-update', data: { id, changes } });
+    if (!silent && window.LDHistory) addHistory({ type: 'text-update', data: { id, changes } });
   }
   function remove(id) {
     texts = texts.filter(t => t.id !== id);
     if (selectedId === id) deselect();
     render();
     if (sendingEnabled) window.LDSocket.emit('text-delete', { id });
-    if (window.LDHistory) window.LDHistory.add({ type: 'text-delete', data: { id } });
+    if (window.LDHistory) addHistory({ type: 'text-delete', data: { id } });
   }
   function clearAll() { texts = []; deselect(); render(); }
   function setAll(arr) {
@@ -343,7 +349,7 @@ window.LDTextCanvas = (() => {
     texts.push(copy);
     render();
     if (sendingEnabled) window.LDSocket.emit('text-create', copy);
-    if (window.LDHistory) window.LDHistory.add({ type: 'text-add', data: { text: JSON.parse(JSON.stringify(copy)) } });
+    if (window.LDHistory) addHistory({ type: 'text-add', data: { text: JSON.parse(JSON.stringify(copy)) } });
     selectText(copy.id);
   }
   function setSending(on) { sendingEnabled = !!on; }

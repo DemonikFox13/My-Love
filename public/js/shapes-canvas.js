@@ -8,6 +8,12 @@ window.LDShapesCanvas = (() => {
   let gesture = null;
   let pendingTap = null;
   let sendingEnabled = true;
+
+  function addHistory(action) {
+    if (!window.LDHistory) return;
+    if (!sendingEnabled) action._p = true;
+    window.LDHistory.add(action);
+  }
   const guides = { v: [], h: [] };
 
   const toolbar = document.getElementById('shapesToolbar');
@@ -292,7 +298,7 @@ window.LDShapesCanvas = (() => {
           });
         }
         if (window.LDHistory) {
-          window.LDHistory.add({ type: 'shape-update', data: { id: target.id, changes: { x: target.x, y: target.y } } });
+          addHistory({ type: 'shape-update', data: { id: target.id, changes: { x: target.x, y: target.y } } });
         }
       }
       guides.v = []; guides.h = [];
@@ -303,7 +309,7 @@ window.LDShapesCanvas = (() => {
       if (target) {
         const changes = { w: target.w, h: target.h, rotation: target.rotation };
         if (sendingEnabled) window.LDSocket.emit('shape-update', { id: target.id, changes });
-        if (window.LDHistory) window.LDHistory.add({ type: 'shape-update', data: { id: target.id, changes } });
+        if (window.LDHistory) addHistory({ type: 'shape-update', data: { id: target.id, changes } });
       }
       gesture = null;
     }
@@ -335,7 +341,7 @@ window.LDShapesCanvas = (() => {
     } else {
       render();
     }
-    if (window.LDHistory) window.LDHistory.add({ type: 'shape-add', data: { shape: JSON.parse(JSON.stringify(s)) } });
+    if (!silent && window.LDHistory) addHistory({ type: 'shape-add', data: { shape: JSON.parse(JSON.stringify(s)) } });
     return s;
   }
 
@@ -345,7 +351,7 @@ window.LDShapesCanvas = (() => {
     Object.assign(s, changes);
     render();
     if (!silent && sendingEnabled) window.LDSocket.emit('shape-update', { id, changes });
-    if (window.LDHistory) window.LDHistory.add({ type: 'shape-update', data: { id, changes } });
+    if (!silent && window.LDHistory) addHistory({ type: 'shape-update', data: { id, changes } });
   }
 
   function remove(id) {
@@ -353,7 +359,7 @@ window.LDShapesCanvas = (() => {
     if (selectedId === id) deselect();
     render();
     if (sendingEnabled) window.LDSocket.emit('shape-delete', { id });
-    if (window.LDHistory) window.LDHistory.add({ type: 'shape-delete', data: { id } });
+    if (window.LDHistory) addHistory({ type: 'shape-delete', data: { id } });
   }
   function clearAll() { shapes = []; deselect(); render(); }
   function setAll(arr) {
@@ -379,7 +385,7 @@ window.LDShapesCanvas = (() => {
     shapes.push(copy);
     render();
     if (sendingEnabled) window.LDSocket.emit('shape-create', copy);
-    if (window.LDHistory) window.LDHistory.add({ type: 'shape-add', data: { shape: JSON.parse(JSON.stringify(copy)) } });
+    if (window.LDHistory) addHistory({ type: 'shape-add', data: { shape: JSON.parse(JSON.stringify(copy)) } });
     selectShape(copy.id);
   }
   function setSending(on) { sendingEnabled = !!on; }

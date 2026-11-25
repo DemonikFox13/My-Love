@@ -139,12 +139,16 @@ function initSocket(io) {
     });
 
     // Синхронизация истории (Undo/Redo)
-    socket.on('sync-canvas', (data) => {
-      if (myCanvas && data) {
-        if (Array.isArray(data.strokes)) myCanvas.strokes = data.strokes;
-        if (Array.isArray(data.shapes)) myCanvas.shapes = data.shapes;
-        if (Array.isArray(data.texts)) myCanvas.texts = data.texts;
-        
+    socket.on('sync-canvas', (payload) => {
+      if (myCanvas && payload) {
+        const strokes = Array.isArray(payload) ? payload : payload.strokes;
+        const shapes = Array.isArray(payload) ? null : payload.shapes;
+        const texts = Array.isArray(payload) ? null : payload.texts;
+
+        if (Array.isArray(strokes)) myCanvas.strokes = strokes;
+        if (Array.isArray(shapes)) myCanvas.shapes = shapes;
+        if (Array.isArray(texts)) myCanvas.texts = texts;
+
         socket.broadcast.emit('history', myCanvas.strokes);
         socket.broadcast.emit('shapes-history', myCanvas.shapes);
         socket.broadcast.emit('texts-history', myCanvas.texts);

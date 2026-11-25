@@ -85,35 +85,28 @@
     let shapes = [];
     let texts = [];
     
-    // Проходим по всей истории по порядку
     for (const a of window.LDHistory.getAll()) {
+      if (a._p) continue; // Приватные действия не синхронизируем
       if (a.type === 'clear') {
-        // Если была очистка — обнуляем всё, что было до неё!
-        strokes = [];
-        shapes = [];
-        texts = [];
+        strokes = []; shapes = []; texts = [];
       } else if (a.type === 'strokes') {
         for (const s of a.data) {
-          if (!s._p) strokes.push(s); // Пропускаем приватные штрихи
+          if (!s._p) strokes.push(s);
         }
       } else if (a.type === 'fill') {
-        if (!a.data._p) strokes.push({ isFill: true, ...a.data }); // Пропускаем приватную заливку
+        if (!a.data._p) strokes.push({ isFill: true, ...a.data });
       } else if (a.type === 'shape-add') {
         shapes.push(JSON.parse(JSON.stringify(a.data.shape)));
       } else if (a.type === 'shape-update') {
-        const s = shapes.find(x => x.id === a.data.id);
-        if (s) Object.assign(s, a.data.changes);
+        const s = shapes.find(x => x.id === a.data.id); if (s) Object.assign(s, a.data.changes);
       } else if (a.type === 'shape-delete') {
-        const i = shapes.findIndex(x => x.id === a.data.id);
-        if (i >= 0) shapes.splice(i, 1);
+        const i = shapes.findIndex(x => x.id === a.data.id); if (i >= 0) shapes.splice(i, 1);
       } else if (a.type === 'text-add') {
         texts.push(JSON.parse(JSON.stringify(a.data.text)));
       } else if (a.type === 'text-update') {
-        const t = texts.find(x => x.id === a.data.id);
-        if (t) Object.assign(t, a.data.changes);
+        const t = texts.find(x => x.id === a.data.id); if (t) Object.assign(t, a.data.changes);
       } else if (a.type === 'text-delete') {
-        const i = texts.findIndex(x => x.id === a.data.id);
-        if (i >= 0) texts.splice(i, 1);
+        const i = texts.findIndex(x => x.id === a.data.id); if (i >= 0) texts.splice(i, 1);
       }
     }
     
@@ -155,6 +148,7 @@
         window.LDHistory.undo();
         const strokes = [];
         for (const a of window.LDHistory.getAll()) {
+      if (a._p) continue; // Приватные действия не синхронизируем
           if (a.type === 'strokes') for (const s of a.data) strokes.push(s);
         }
         if (strokes.length) {
@@ -248,17 +242,15 @@
   window.LDSocket.on('clear-background', () => window.LDBackground.setFromDataUrl(null));
 
   document.getElementById('clearBtn').addEventListener('click', () => {
-    // 1. Локальная очистка — работает без интернета и без confirm()
-    if (window.LDCanvas.exitSpecialModes) window.LDCanvas.exitSpecialModes();
-    if (window.LDPresets && window.LDPresets.reset) window.LDPresets.reset();
-    window.LDCanvas.clearSilent();
-    window.LDTextCanvas.clearAll();
-    window.LDShapesCanvas.clearAll();
-    window.LDCanvas.clearPaws();
-    // 2. Добавляем в историю как одно действие (чтобы ↪ мог отменить)
-    if (window.LDHistory) window.LDHistory.add({ type: 'clear', data: {} });
-    // 3. Отправляем партнёру (если есть сеть)
-    try { window.LDSocket.emit('clear'); } catch(e) {}
+    try {
+      if (window.LDCanvas && window.LDCanvas.exitSpecialModes) window.LDCanvas.exitSpecialModes();
+      if (window.LDPresets && window.LDPresets.reset) window.LDPresets.reset();
+      if (window.LDCanvas) { window.LDCanvas.clearSilent(); window.LDCanvas.clearPaws(); }
+      if (window.LDTextCanvas) window.LDTextCanvas.clearAll();
+      if (window.LDShapesCanvas) window.LDShapesCanvas.clearAll();
+      if (window.LDHistory) window.LDHistory.add({ type: 'clear', data: {} });
+      window.LDSocket.emit('clear');
+    } catch(e) { console.error(e); }
   });
 
   const sizeSlider = document.getElementById('size');
