@@ -11,6 +11,10 @@
     if (window.AndroidOverlay && window.AndroidOverlay.onPartnerDraw) {
         try { window.AndroidOverlay.onPartnerDraw(); } catch(e) {}
     }
+    if (s.isFill) {
+      window.LDCanvas.applyFloodFillFromPercent(s.xPct, s.yPct, s.color);
+      return;
+    }
     if (s.isPaw) {
       if (s.mode === 'fade') {
         s.addedAt = Date.now();
@@ -146,16 +150,8 @@
       // Если на вершине clear — восстанавливаем холст
       if (last && last.type === 'clear') {
         window.LDHistory.undo();
-        const strokes = [];
-        for (const a of window.LDHistory.getAll()) {
-      if (a._p) continue; // Приватные действия не синхронизируем
-          if (a.type === 'strokes') for (const s of a.data) strokes.push(s);
-        }
-        if (strokes.length) {
-          try { window.LDSocket.emit('draw-batch', strokes); } catch(e) {}
-        }
-        if (window.LDEmojis) window.LDEmojis.showToast('Холст восстановлен', 'success');
         syncHistoryToServer();
+        if (window.LDEmojis) window.LDEmojis.showToast('Холст восстановлен', 'success');
         return;
       }
 
