@@ -7,7 +7,7 @@ window.LDCanvas = (() => {
   const ctx      = canvas.getContext('2d');
   const pctx     = previewCanvas ? previewCanvas.getContext('2d') : null;
   const pawsCtx  = pawsCanvas ? pawsCanvas.getContext('2d') : null;
-  const dpr      = Math.min(window.devicePixelRatio || 1, 1.5);
+  const dpr      = window.devicePixelRatio || 1;
 
   const TOL = 30;
 
